@@ -212,17 +212,19 @@ importFromNanoscope<-function(fullfilename){
   
   unlistedNewHdrs=unlist(strsplit(newhdrs, ":", fixed=TRUE))
   
-  oneSamplesperline =which(unlistedNewHdrs== "Sampsline")
+  oneSamplesperline =which(tolower(unlistedNewHdrs)== "sampsline")
   Samplesperline = as.numeric(unlistedNewHdrs[oneSamplesperline+1][1])
-  Samplesperline
-  oneScanSize =which(unlistedNewHdrs== "ScanSize")
+  #Samplesperline
+  oneScanSize =which(tolower(unlistedNewHdrs)== "scansize")
   ScanSize= unlistedNewHdrs[oneScanSize+1][1]
   ScanSize = as.numeric(substr(ScanSize, 1, nchar(ScanSize)-2))
-  ScanSize
-  oneLines =which(unlistedNewHdrs== "Lines")
+  #ScanSize
+  oneLines =which(tolower(unlistedNewHdrs)== "lines")
   Lines = as.numeric(unlistedNewHdrs[oneLines+1][1])
-  Lines
+  #Lines
   
+  
+  print(paste(ScanSize, Samplesperline, Lines))
   nM <- read.table(fullfilename, skip=headerSizeWhich)
   nM <- unlist(nM)
   
