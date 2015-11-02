@@ -48,10 +48,13 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
     changeViewpoint<-FALSE
   }
   
-  minH<-min(AFMImage@data$h)
+  # respect the proportion between horizontal / vertical distance and heigth
+  newHeights <- (AFMImage@data$h)*(AFMImage@samplesperline)/(AFMImage@scansize)
+
+  minH<-min(newHeights)
   # TODO check validity of created image instead
   if(!is.na(minH)) {
-    newH<-(AFMImage@data$h-minH)
+    newH<-(newHeights-minH)
     y<-matrix(newH, nrow = AFMImage@lines, ncol = AFMImage@samplesperline)
     #z <- seq(ncol(y),1,by=-1) 
     z <- seq(1,ncol(y),by=1) 
@@ -113,9 +116,12 @@ exportToSTL<- function(AFMImage, stlfullfilename) {
   print(paste("exporting to stl format ", basename(stlfullfilename) ))
   baseThickness<-2
   
-  minH<-min(AFMImage@data$h)
-  if (minH<0) { newH<-(AFMImage@data$h-minH+baseThickness) 
-  }  else { newH<-(AFMImage@data$h-minH+5) }
+  # respect the proportion between horizontal / vertical distance and heigth
+  newHeights <- (AFMImage@data$h)*(AFMImage@samplesperline)/(AFMImage@scansize)
+  
+  minH<-min(newHeights)
+  if (minH<0) { newH<-(newHeights-minH+baseThickness) 
+  }  else { newH<-(newHeights-minH+5) }
   
   #face 1
   x1<-seq(1:AFMImage@lines)
