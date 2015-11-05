@@ -120,8 +120,11 @@ exportToSTL<- function(AFMImage, stlfullfilename) {
   newHeights <- (AFMImage@data$h)*(AFMImage@samplesperline)/(AFMImage@scansize)
   
   minH<-min(newHeights)
+  #print(paste("minH", minH))
   if (minH<0) { newH<-(newHeights-minH+baseThickness) 
   }  else { newH<-(newHeights-minH+5) }
+  #print(paste("min(newH)", min(newH)))
+  #print(paste("max(newH)", max(newH)))
   
   #face 1
   x1<-seq(1:AFMImage@lines)
@@ -211,7 +214,7 @@ exportToSTL<- function(AFMImage, stlfullfilename) {
   
   #face 4
   y1<-seq(1:AFMImage@samplesperline)
-  x1<-rep(AFMImage@lines-1, times = AFMImage@samplesperline)
+  x1<-rep(AFMImage@lines, times = AFMImage@samplesperline)
   z1<-rev(newH[x1+(y1-1)*AFMImage@samplesperline])
   
   
@@ -227,7 +230,7 @@ exportToSTL<- function(AFMImage, stlfullfilename) {
   y1=c(y1,y1[1])
   z1=c(z1,z1[1])
   
-  f4<-polygon3d(y1, z1, x1+1, col = "red", plot=FALSE, fill=TRUE)
+  f4<-polygon3d(y1, z1, x1, col = "red", plot=FALSE, fill=TRUE)
   f4<-rotate3d( f4 , -pi/2, 1, 0, 0 )
   f4<-rotate3d( f4 , -pi/2, 0, 0, 1 )
   
