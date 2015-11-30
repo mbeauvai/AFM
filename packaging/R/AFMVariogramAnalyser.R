@@ -315,8 +315,12 @@ setMethod(f="getDTModelSillRange", "AFMImageVariogramAnalysis",
 #'  # Variogram analysis 
 #' sampleFitPercentage<-3.43/100
 #' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage)
-#' variogramAnalysis@@omnidirectionalVariogram<- AFM::calculateOmnidirectionalVariogram(AFMImage,variogramAnalysis)
-#' variogramAnalysis@@directionalVariograms<- AFM::calculateDirectionalVariograms(AFMImage,variogramAnalysis)
+#' variogramAnalysis@@omnidirectionalVariogram<- 
+#'               AFM::calculateOmnidirectionalVariogram(AFMImage=AFMImage,
+#'                                                      AFMImageVariogramAnalysis=variogramAnalysis)
+#' variogramAnalysis@@directionalVariograms<- 
+#'               AFM::calculateDirectionalVariograms(AFMImage=AFMImage,
+#'                                                  AFMImageVariogramAnalysis=variogramAnalysis)
 #'  
 #' # manage model evaluations
 #' AFMImageVariogram<-variogramAnalysis@@omnidirectionalVariogram
@@ -539,7 +543,17 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
             return(AFMImageVariogramAnalysis)
           })
 
-#' @export updateProgress
+
+#' @title updateProgress
+#' @name updateProgress
+#' @aliases updateProgress updateProgress,AFMImageVariogramAnalysis-method
+#' @docType methods
+#' @param AFMImageVariogramAnalysis an \code{\link{AFMImageVariogramAnalysis}}
+#' @param value shiny progress bar value
+#' @param detail shiny progress bar detail
+#' @param message shiny progress bar message
+#' @rdname AFMImageVariogramAnalysis-updateProgress-method
+#' @export
 setGeneric(name= "updateProgress", 
            def= function(AFMImageVariogramAnalysis, value, detail, message) {
              return(standardGeneric("updateProgress"))
@@ -617,7 +631,8 @@ getAutomaticWidthForVariogramCalculation<-function(AFMImage){
 #' 
 #' data(AFMImageOfRegularPeaks)
 #' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43)
-#' avario<-AFM::calculateOmnidirectionalVariogram( AFMImage= AFMImageOfRegularPeaks, AFMImageVariogramAnalysis= variogramAnalysis)
+#' avario<-AFM::calculateOmnidirectionalVariogram(AFMImageVariogramAnalysis= variogramAnalysis, 
+#'                                                AFMImage= AFMImageOfRegularPeaks)
 #' dist<-gamma<-NULL
 #' p <- ggplot(avario, aes(x=dist, y=gamma))
 #' p <- p + geom_point()
@@ -664,7 +679,8 @@ calculateOmnidirectionalVariogram<- function(AFMImageVariogramAnalysis, AFMImage
 #' 
 #' data(AFMImageOfRegularPeaks)
 #' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43)
-#' varios<-AFM::calculateDirectionalVariograms(AFMImage= AFMImageOfRegularPeaks, AFMImageVariogramAnalysis= variogramAnalysis)
+#' varios<-AFM::calculateDirectionalVariograms(AFMImage= AFMImageOfRegularPeaks, 
+#'                                             AFMImageVariogramAnalysis= variogramAnalysis)
 #' dist<-gamma<-NULL
 #' p <- ggplot(varios, aes(x=dist, y=gamma,  
 #'                         color= as.factor(dir.hor), 
@@ -804,7 +820,27 @@ saveSpplotFromAFMImage<-function(AFMImage, fullfilename, expectedWidth, expectHe
   dev.off()
 }
 
+#' Get an AFMImage as a Lattice (trellis) plot
+#' 
+#' get a Lattice (trellis) plot of an \code{\link{AFMImage}} using the \code{\link[sp]{spplot}} method of the sp package.
+#' This function is used to evaluate visually the quality of the predicted surface when a variogram model is used.
+#'
+#' \code{getSpplotFromAFMImage} get a Lattice (trellis) plot of an \code{\link{AFMImage}} on disk
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param expectedWidth (optional) expected width of the saved image. Default is 400px.
+#' @param expectHeight (optional) expected height of the saved image. Default is 300px.
+#' @param withoutLegend (optional) set at FALSE, the cuts legend will be included in the plot. Default is FALSE.
+#' @author M.Beauvais
+#' @rdname AFMVariogramAnalyser-getSpplotFromAFMImage
 #' @export
+#' @examples 
+#' \dontrun{
+#' library(AFM)
+#' 
+#' data(AFMImageOfAluminiumInterface)
+#' p<-getSpplotFromAFMImage(AFMImageOfAluminiumInterface, 800,800, TRUE)
+#' print(p)
+#' }
 getSpplotFromAFMImage<-function(AFMImage, expectedWidth, expectHeight, withoutLegend) {
   if (missing(expectedWidth)) expectedWidth = 400
   if (missing(expectHeight))expectHeight = 300

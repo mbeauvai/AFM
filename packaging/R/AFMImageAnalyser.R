@@ -328,7 +328,7 @@ checkIsotropy<-function(AFMImage, AFMImageAnalyser) {
   sampleFitPercentage<-3.43/100
   variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage)
   if(!is.null(AFMImageAnalyser@updateProgress)) variogramAnalysis@updateProgress<-AFMImageAnalyser@updateProgress
-  variogramAnalysis@directionalVariograms<- calculateDirectionalVariograms(AFMImage, variogramAnalysis)
+  variogramAnalysis@directionalVariograms<- calculateDirectionalVariograms(AFMImage=AFMImage, AFMImageVariogramAnalysis=variogramAnalysis)
   
   AFMImageAnalyser@variogramAnalysis<-variogramAnalysis
   print("done.")
@@ -420,6 +420,7 @@ checkNormalityDensity<- function(AFMImage) {
 
 getLibrariesVersions<-function() {
   v<-data.table(installed.packages())
+  Package<-NULL
   AFMPackage<-v[Package=="AFM",]
   gstatPackage<-v[Package=="gstat",]
   fractaldimPackage<-v[Package=="fractaldim",]
