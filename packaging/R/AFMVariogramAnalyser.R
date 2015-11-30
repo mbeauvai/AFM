@@ -13,9 +13,7 @@ require(gridExtra)
 require(reshape2)
 require(ggplot2)
 
-#source("R/AFMImage.R")
-
-if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "x", "y","TheData","chosenSample","predict.gstat"))
+if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "x", "y","TheData","chosenFitSample","predict.gstat"))
 
 #' @title AFM Image Variogram Model class
 #' 
@@ -93,30 +91,38 @@ AFMImageVariogramModel <- function() {
 #' 
 #' @description \code{AFMImageVariogramAnalysis} manages the variogram analysis of an \code{\link{AFMImage}}
 #'
+#' @slot width (optional) a distance step for the calculation of the variograms
+#'   (e.g.: width=  integer of (scan Size divided by number of lines)= ceil(1000 / 512) for AFMImageOfAluminiumInterface
 #' @slot omnidirectionalVariogram a data.table to store the omnidirectional variogram
 #' @slot directionalVariograms a data.table to store the directional variograms
-#' @slot sampleSizePercentage a sample size as a percentage of random points in the \code{\link{AFMImage}}. These points will be used to fit the variogram models.
-#' @slot chosenSample the chosen random points  of the \code{\link{AFMImage}} to perform the fitting of the variogram models.
+#' @slot sampleFitPercentage a sample size as a percentage of random points in the \code{\link{AFMImage}}. These points will be used to fit the variogram models.
+#' @slot chosenFitSample the chosen random points  of the \code{\link{AFMImage}} to perform the fitting of the variogram models.
 #' @slot cuts the cuts for spplot of the \code{\link{AFMImage}}. The same cuts will be used for the predicted \code{\link{AFMImage}}
 #' @slot variogramModels A list of \code{\link{AFMImageVariogramModel}} containing the various evaluated variogram models.
-#' @slot csvFullfilename to be removed ?
+#' @slot fullfilename to be removed ?
+#' @slot updateProgress a function to update a graphical user interface
 #' @name AFMImageVariogramAnalysis-class
 #' @rdname AFMImageVariogramAnalysis-class
 #' @exportClass AFMImageVariogramAnalysis 
 #' @author M.Beauvais
 #'
 AFMImageVariogramAnalysis<-setClass("AFMImageVariogramAnalysis",
-                                    slots = c(omnidirectionalVariogram="data.table",
-                                              expectedSill="numeric",
-                                              expectedRange="numeric",
-                                              directionalVariograms="data.table",
-                                              sampleSizePercentage="numeric",
-                                              chosenSample="numeric",
-                                              cuts="numeric",
-                                              variogramModels="list",
-                                              csvFullfilename="character"),
+                                    slots = c(
+                                      width="numeric",
+                                      sampleVariogramPercentage="numeric",
+                                      omnidirectionalVariogram="data.table",
+                                      expectedSill="numeric",
+                                      expectedRange="numeric",
+                                      directionalVariograms="data.table",
+                                      sampleFitPercentage="numeric",
+                                      sampleValidatePercentage="numeric",
+                                      chosenFitSample="numeric",
+                                      cuts="numeric",
+                                      variogramModels="list",
+                                      fullfilename="character",
+                                      updateProgress="function"),
                                     validity = function(object) { 
-                                      if (object@sampleSizePercentage > 1 )
+                                      if (object@sampleFitPercentage > 1 )
                                         ## sample can't be more than 100%
                                         return(FALSE)
                                       else
@@ -127,15 +133,24 @@ AFMImageVariogramAnalysis<-setClass("AFMImageVariogramAnalysis",
 #' Constructor method of AFMImageVariogramAnalysis Class.
 #'
 #' @param .Object an AFMImageVariogramAnalysis class
-#' @param sampleSizePercentage a sample size as a percentage (e.g. "5" for 5 percents) of random points in the \code{\link{AFMImage}}. These points will be used to fit the variogram models.
+#' @param sampleFitPercentage a sample size as a percentage (e.g. "5" for 5 percents) of random points in the \code{\link{AFMImage}}. These points will be used to fit the variogram models.
+#' @param updateProgress a function to update a graphical user interface
 #' @rdname AFMImageVariogramAnalysis-class
 #' @export
 setMethod("initialize",
           "AFMImageVariogramAnalysis",
-          function(.Object, sampleSizePercentage) {
-            .Object@sampleSizePercentage <- sampleSizePercentage
+          function(.Object, sampleFitPercentage, updateProgress) {
+            if (missing(updateProgress)) {
+              print("missing")
+              #.Object@updateProgress<-
+            }else{
+              print("not missing")
+              .Object@updateProgress<-updateProgress  
+            }
+            .Object@sampleFitPercentage <- sampleFitPercentage
             .Object@omnidirectionalVariogram<-data.table()
             .Object@directionalVariograms<-data.table()
+            #.Object@updateProgress
             validObject(.Object) ## valide l'objet
             return(.Object)
           })
@@ -144,8 +159,8 @@ setMethod("initialize",
 #'
 #' @rdname AFMImageVariogramAnalysis-class
 #' @export
-AFMImageVariogramAnalysis <- function(sampleSizePercentage) {
-  return(new("AFMImageVariogramAnalysis", sampleSizePercentage= sampleSizePercentage))
+AFMImageVariogramAnalysis <- function(sampleFitPercentage) {
+  return(new("AFMImageVariogramAnalysis", sampleFitPercentage=sampleFitPercentage))
 }
 
 
@@ -302,10 +317,10 @@ setMethod(f="getDTModelSillRange", "AFMImageVariogramAnalysis",
 #' AFMImageAnalyser<-AFMImageAnalyser(AFMImage)
 #'  
 #'  # Variogram analysis 
-#' sampleSizePercentage<-3.43/100
-#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleSizePercentage)
-#' variogramAnalysis@@omnidirectionalVariogram<- AFM::calculateOmnidirectionalVariogram(AFMImage)
-#' variogramAnalysis@@directionalVariograms<- AFM::calculateDirectionalVariograms(AFMImage)
+#' sampleFitPercentage<-3.43/100
+#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage)
+#' variogramAnalysis@@omnidirectionalVariogram<- AFM::calculateOmnidirectionalVariogram(AFMImage,variogramAnalysis)
+#' variogramAnalysis@@directionalVariograms<- AFM::calculateDirectionalVariograms(AFMImage,variogramAnalysis)
 #'  
 #' # manage model evaluations
 #' AFMImageVariogram<-variogramAnalysis@@omnidirectionalVariogram
@@ -328,11 +343,10 @@ setGeneric(name= "evaluateVariogramModels",
 #' @rdname AFMImageVariogramAnalysis-evaluateVariogramModels-method
 #' @export
 setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
-          definition= function(AFMImageVariogramAnalysis, AFMImage ) {
-            
+          definition= function(AFMImageVariogramAnalysis, AFMImage) {
             
             AFMImageVariogram<-AFMImageVariogramAnalysis@omnidirectionalVariogram
-            AFMImageSampleSizePercentage<-AFMImageVariogramAnalysis@sampleSizePercentage
+            AFMImagesampleFitPercentage<-AFMImageVariogramAnalysis@sampleFitPercentage
             
             class(AFMImageVariogram)=c("gstatVariogram","data.frame")
             filename<-basename(AFMImage@fullfilename)
@@ -344,31 +358,31 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
             
             # 3.43% for 9000 points to model
             # use 512*512 - 9000 to validate
-            #AFMImageSampleSizePercentage<- 3.43/100
+            #AFMImagesampleFitPercentage<- 3.43/100
             TheData<-as.data.frame(AFMImage@data)
             TheData=na.omit(TheData)
             
             # We randomly split the data into two parts. 
-            # From the data, AFMImageSampleSizePercentage observations will be used for variogram modeling 
+            # From the data, AFMImagesampleFitPercentage observations will be used for variogram modeling 
             # and the rest will be used for prediction and evaluation
             totalSampleSize<-AFMImage@samplesperline*AFMImage@lines
             
-            choose<-floor(totalSampleSize*AFMImageSampleSizePercentage)
-            chosenSample<-sample(1:totalSampleSize, choose) 
-            AFMImageVariogramAnalysis@chosenSample<-chosenSample
+            choose<-floor(totalSampleSize*AFMImagesampleFitPercentage)
+            chosenFitSample<-sample(1:totalSampleSize, choose) 
+            AFMImageVariogramAnalysis@chosenFitSample<-chosenFitSample
             
             #print(paste("Kriging sample size", choose))
             #print(paste("Validation sample size", choose))
             
-            part_model <- TheData[chosenSample, ]
-            part_model2 <- TheData[chosenSample, ]
+            part_model <- TheData[chosenFitSample, ]
+            part_model2 <- TheData[chosenFitSample, ]
             
             coordinates(part_model) = ~x+y
             proj4string(part_model)=CRS("+init")
             is.projected(part_model)
             
-            part_valid <- TheData[-chosenSample, ] 
-            part_valid2 <- TheData[-chosenSample, ] 
+            part_valid <- TheData[-chosenFitSample, ] 
+            part_valid2 <- TheData[-chosenFitSample, ] 
             part_valid <- TheData
             part_valid2 <- TheData
             coordinates(part_valid) = ~x+y
@@ -386,6 +400,11 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
             # get all vgm models
             allVariogramModelEvaluation<-c()
             notUsedModels<-c("Nug","Int", "Err", "Lin", "Pow", "Leg", "Spl")
+            
+            # for updateProgress
+            counter<-0
+            totalCounter<-3*(length(vgm()$short)-length(notUsedModels))
+            
             for (testedModel in vgm()$short){
               if (match(testedModel, notUsedModels, nomatch = FALSE)) {
                 print(paste("the model", testedModel,"will not be used"))
@@ -459,15 +478,40 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
                   vgm<-vgm(psill= psill,model=testedModel,range= range,nugget=expectedNugget)
                   
                   #TODO 
+                  print("1")
+                  if (!is.null(AFMImageVariogramAnalysis@updateProgress)) {
+                    if (is.function(AFMImageVariogramAnalysis@updateProgress)&&
+                        !is.null(AFMImageVariogramAnalysis@updateProgress())) {
+                      counter<-counter+1
+                      AFMImageVariogramAnalysis@updateProgress(detail=paste0("fitting ",modelName, " model"), value=counter/totalCounter)
+                    }
+                  }
+                  print("2")
                   fit.v <- fit.variogram(AFMImageVariogram, vgm, fit.sills = fitsills, warn.if.neg=TRUE)
                   #print(fit.v$psill)
                   if (as.numeric(fit.v$psill[2]) > 0) {
                     # krigging on a sample
                     #print("Kriging...")
+                    if (!is.null(AFMImageVariogramAnalysis@updateProgress)) {
+                      if (is.function(AFMImageVariogramAnalysis@updateProgress)&&
+                          !is.null(AFMImageVariogramAnalysis@updateProgress())) {
+                        counter<-counter+1
+                        AFMImageVariogramAnalysis@updateProgress(detail=paste0("krigging ",modelName, " model"), value=counter/totalCounter)
+                      }
+                    }
+                    
                     mykrige<-mykrigefunction(fit.v, part_model, part_valid)
-
+                    
                     # Evaluate quality of krigging
                     print("Evaluate quality...")
+                    if (!is.null(AFMImageVariogramAnalysis@updateProgress)) {
+                      if (is.function(AFMImageVariogramAnalysis@updateProgress)&&
+                          !is.null(AFMImageVariogramAnalysis@updateProgress())) {
+                        counter<-counter+1
+                        AFMImageVariogramAnalysis@updateProgress(detail=paste0("evaluating ",modelName, " model"), value=counter/totalCounter)
+                      }
+                    }
+                    
                     myStatsFromKrige<-statsFromKrige(filename, vgm, part_valid,mykrige)
                     res<-data.table(myStatsFromKrige)
                     print(res$cor)
@@ -485,7 +529,10 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
                     print(paste("sill is negative for model", testedModel, sep=" "))
                   }
                   
-                }, warning=function(w) message(paste("warning with", testedModel,w))
+                }, warning=function(w) {
+                  message(paste("warning with", testedModel,w))
+                  counter<-counter+1
+                }
                 ,error=function(e) message(paste("Pb2 with", testedModel,e))
                 )
               }
@@ -496,6 +543,11 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
             return(AFMImageVariogramAnalysis)
           })
 
+#' @export updateProgress
+setGeneric(name= "updateProgress", 
+           def= function(AFMImageVariogramAnalysis, value, detail, message) {
+             return(standardGeneric("updateProgress"))
+           })
 
 calculateWavModelExpectedSill<-function(omnidirectionalVariogram) {
   return(floor(mean(tail(omnidirectionalVariogram$gamma, floor(length(omnidirectionalVariogram$gamma)/2)))))
@@ -557,8 +609,7 @@ getAutomaticWidthForVariogramCalculation<-function(AFMImage){
 #' With 512*512 images, it takes several minutes to calculate.
 #' 
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
-#' @param width (optional) a distance step for the calculation of the variograms
-#'   (e.g.: width=  integer of (scan Size divided by number of lines)= ceil(1000 / 512) for AFMImageOfAluminiumInterface
+#' @param AFMImageVariogramAnalysis an \code{\link{AFMImageVariogramAnalysis}} to manage and store the result of variogram analysis
 #' @return the semivariance calculated in all the directions
 #' @rdname AFMImageVariogramAnalyser-calculateOmnidirectionalVariogram
 #' @author M.Beauvais
@@ -569,7 +620,8 @@ getAutomaticWidthForVariogramCalculation<-function(AFMImage){
 #' library(ggplot2)
 #' 
 #' data(AFMImageOfRegularPeaks)
-#' avario<-AFM::calculateOmnidirectionalVariogram(AFMImageOfRegularPeaks)
+#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43)
+#' avario<-AFM::calculateOmnidirectionalVariogram( AFMImage= AFMImageOfRegularPeaks, AFMImageVariogramAnalysis= variogramAnalysis)
 #' dist<-gamma<-NULL
 #' p <- ggplot(avario, aes(x=dist, y=gamma))
 #' p <- p + geom_point()
@@ -579,12 +631,14 @@ getAutomaticWidthForVariogramCalculation<-function(AFMImage){
 #' p <- p + ggtitle("Experimental semivariogram")
 #' p
 #' }
-calculateOmnidirectionalVariogram<- function(AFMImage, width) {
-  print("calculating omnidirectional variogram...")
-  if (missing(width)) {
-    width=getAutomaticWidthForVariogramCalculation(AFMImage)
+calculateOmnidirectionalVariogram<- function(AFMImageVariogramAnalysis, AFMImage) {
+  if (is.null(AFMImageVariogramAnalysis@width)) {
+    AFMImageVariogramAnalysis@width=getAutomaticWidthForVariogramCalculation(AFMImage)
     print(paste("using automatic width of", width))
   }
+  width=AFMImageVariogramAnalysis@width
+  
+  print("calculating omnidirectional variogram...")
   data<-AFMImage@data
   x<-y<-NULL
   setkey(data,x,y)
@@ -602,8 +656,7 @@ calculateOmnidirectionalVariogram<- function(AFMImage, width) {
 #' 
 #' \code{calculateDirectionalVariograms} returns the directional variograms
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
-#' @param width (optional) a distance step for the calculation of the variograms
-#'   (e.g.: width=  integer of (scan Size divided by number of lines)= ceil(1000 / 512) for AFMImageOfAluminiumInterface
+#' @param AFMImageVariogramAnalysis an \code{\link{AFMImageVariogramAnalysis}} to manage and store the result of variogram analysis
 #' @return Four directional variograms
 #' @rdname AFMImageVariogramAnalyser-calculateDirectionalVariograms
 #' @author M.Beauvais
@@ -614,7 +667,8 @@ calculateOmnidirectionalVariogram<- function(AFMImage, width) {
 #' library(ggplot2)
 #' 
 #' data(AFMImageOfRegularPeaks)
-#' varios<-AFM::calculateDirectionalVariograms(AFMImageOfRegularPeaks, 1)
+#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43)
+#' varios<-AFM::calculateDirectionalVariograms(AFMImage= AFMImageOfRegularPeaks, AFMImageVariogramAnalysis= variogramAnalysis)
 #' dist<-gamma<-NULL
 #' p <- ggplot(varios, aes(x=dist, y=gamma,  
 #'                         color= as.factor(dir.hor), 
@@ -627,12 +681,13 @@ calculateOmnidirectionalVariogram<- function(AFMImage, width) {
 #' p <- p + ggtitle("Directional")
 #' p
 #' }
-calculateDirectionalVariograms<- function(AFMImage, width) {
+calculateDirectionalVariograms<- function(AFMImageVariogramAnalysis,AFMImage) {
   print("calculating directional variograms...")
-  if (missing(width)) {
-    width=getAutomaticWidthForVariogramCalculation(AFMImage)
+  if (is.null(AFMImageVariogramAnalysis@width)) {
+    AFMImageVariogramAnalysis@width<-getAutomaticWidthForVariogramCalculation(AFMImage)
     print(paste("using automatic width of", width))
   }
+  width<-AFMImageVariogramAnalysis@width
   x<-y<-NULL
   data<-AFMImage@data
   setkey(data,x,y)
@@ -746,6 +801,19 @@ saveSpplotFromAFMImage<-function(AFMImage, fullfilename, expectedWidth, expectHe
   if (missing(expectHeight))expectHeight = 300
   if(missing(withoutLegend))withoutLegend=FALSE
   
+  p<-getSpplotFromAFMImage(AFMImage, expectedWidth, expectHeight, withoutLegend)
+  
+  png(filename=fullfilename, units = "px", width=expectedWidth, height=expectHeight)
+  print(p)
+  dev.off()
+}
+
+#' @export
+getSpplotFromAFMImage<-function(AFMImage, expectedWidth, expectHeight, withoutLegend) {
+  if (missing(expectedWidth)) expectedWidth = 400
+  if (missing(expectHeight))expectHeight = 300
+  if(missing(withoutLegend))withoutLegend=FALSE
+  
   initialAFMImage<-as.data.frame(AFMImage@data)
   coordinates(initialAFMImage) = ~x+y
   proj4string(initialAFMImage)=CRS("+init")
@@ -760,12 +828,8 @@ saveSpplotFromAFMImage<-function(AFMImage, fullfilename, expectedWidth, expectHe
   }else{
     p<-spplot(initialAFMImage["h"], cuts=cuts, col.regions=cols)
   }
-  
-  png(filename=fullfilename, units = "px", width=expectedWidth, height=expectHeight)
-  print(p)
-  dev.off()
+  return(p)
 }
-
 
 getSpplotImagefullfilename<-function(exportDirectory, sampleName) {
   return(paste(exportDirectory, paste(sampleName,"-real.png",sep=""),sep="/"))
@@ -797,7 +861,7 @@ getOmnidirectionalVarioPngFullfilename<-function(exportDirectory, sampleName) {
   return(exportOpngFullFilename)
 }
 
-getVarioPngChosenSample<-function(exportDirectory, sampleName) {
+getVarioPngchosenFitSample<-function(exportDirectory, sampleName) {
   exportpngFilename<-paste(sampleName, "chosen-sample.png",sep="-")
   exportpngFullFilename<-paste(exportDirectory, exportpngFilename, sep="/")
   return(exportpngFullFilename)

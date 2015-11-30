@@ -1,7 +1,7 @@
 Package: AFM
 Type: Package
-Version: 1.0.0
-Date: 2015-10-29
+Version: 1.1.0
+Date: 2015-11-30
 Title: Atomic Force Microscope Image Analysis
 Authors@R: c(person("Mathieu", "Beauvais", role = c("aut", "cre"), email = "beauvais.escp@gmail.com"),person("Irma", "Liascukiene", role = "aut"),person("Jessem", "Landoulsi", role = "aut"))
 Author: Mathieu Beauvais [aut, cre],
@@ -9,8 +9,9 @@ Author: Mathieu Beauvais [aut, cre],
     Jessem Landoulsi [aut]
 Maintainer: Mathieu Beauvais <beauvais.escp@gmail.com>
 Description: Provides Atomic Force Microscope images analysis such as Power
-    Spectrum Density, roughness against lengthscale, variogram and variance, fractal
-    dimension and scale.
+    Spectrum Density, roughness against lengthscale, variogram and variance,
+    fractal dimension and scale. The AFM images can be exported to STL format for 3D
+    printing.
 NeedsCompilation: no
 Repository: CRAN
 License: AGPL-3
