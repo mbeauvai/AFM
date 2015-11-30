@@ -101,20 +101,22 @@ generateReport <- function(AFMImage) {
   reportDirectory<-paste(sampleDirectory, "outputs", sep="/")
   createReportDirectory(reportDirectory)
   
-  myAFMImageAnalyser<-analyse(AFMImage)
-  putAnalysisOnDisk(myAFMImageAnalyser, AFMImage)
+  AFMImageAnalyser<-new("AFMImageAnalyser", AFMImage=AFMImage, fullfilename= AFMImage@fullfilename)
+  AFMImageAnalyser<-analyse(AFMImageAnalyser=AFMImageAnalyser)
+  putAnalysisOnDisk(AFMImageAnalyser=AFMImageAnalyser, AFMImage=AFMImage)
   
-  # find rdata file for the AFMImage
-  rdata_directoryfiles<-list.files(reportDirectory, 
-                                   include.dirs = FALSE, recursive = FALSE, full.names = TRUE,
-                                   pattern = paste(sampleName,"AFMImageAnalyser.rda$",sep="-"))
+  #   # find rdata file for the AFMImage
+  #   rdata_directoryfiles<-list.files(reportDirectory, 
+  #                                    include.dirs = FALSE, recursive = FALSE, full.names = TRUE,
+  #                                    pattern = paste(sampleName,"AFMImageAnalyser.rda$",sep="-"))
   
-  if (length(rdata_directoryfiles)>0) {
-    generateAFMImageReport(rdata_directoryfiles[1], isCheckReport = FALSE)
-  }else{
-    print("analysis not found...")
-    print(paste(sampleName,"AFMImageAnalyser.rda",sep="-"))
-  }
+  #   if (length(rdata_directoryfiles)>0) {
+  reportFullfilename<-paste(reportDirectory, paste(sampleName,"fullreport.pdf",sep="-"),sep="/")
+  generateAFMImageReport(AFMImageAnalyser, reportFullfilename, isCheckReport = FALSE)
+  #   }else{
+  #     print("analysis not found...")
+  #     print(paste(sampleName,"AFMImageAnalyser.rda",sep="-"))
+  #   }
   
   print("done")
 }
@@ -158,20 +160,23 @@ generateCheckReport <- function(AFMImage) {
   reportDirectory<-paste(sampleDirectory, "outputs", sep="/")
   createReportDirectory(reportDirectory)
   
-  myAFMImageAnalyser<-checkIsotropy(AFMImage)
-  putAnalysisOnDisk(myAFMImageAnalyser, AFMImage)
+  AFMImageAnalyser<-checkIsotropy(AFMImage)
+  putAnalysisOnDisk(AFMImageAnalyser, AFMImage)
   
-  sampleName<-basename(AFMImage@fullfilename)
-  rdata_directoryfiles<-list.files(reportDirectory, 
-                                   include.dirs = FALSE, recursive = FALSE, full.names = TRUE,
-                                   pattern = paste(sampleName,"AFMImageAnalyser.rda$",sep="-"))
+  #   sampleName<-basename(AFMImage@fullfilename)
+  #   rdata_directoryfiles<-list.files(reportDirectory, 
+  #                                    include.dirs = FALSE, recursive = FALSE, full.names = TRUE,
+  #                                    pattern = paste(sampleName,"AFMImageAnalyser.rda$",sep="-"))
   
-  if (length(rdata_directoryfiles)>0) {
-    generateAFMImageReport(rdata_directoryfiles[1], isCheckReport = TRUE)
-  }else{
-    print("analysis not found...")
-    print(paste(sampleName,"AFMImageAnalyser.rda",sep="-"))
-  }
+  # if (length(rdata_directoryfiles)>0) {
+  
+  reportFullfilename<-paste(reportDirectory, paste(sampleName,"checkreport.pdf",sep="-"),sep="/")
+  
+  generateAFMImageReport(AFMImageAnalyser, reportFullfilename, isCheckReport = TRUE)
+  #   }else{
+  #     print("analysis not found...")
+  #     print(paste(sampleName,"AFMImageAnalyser.rda",sep="-"))
+  #   }
   print("done")
 }
 
@@ -179,37 +184,45 @@ generateCheckReport <- function(AFMImage) {
 #' 
 #' @description \code{generateAFMImageReport} generates a report from an AFMImageAnalyser object
 #'
-#' @param oneAFMImageAnalyserFile an \code{\link{AFMImageAnalyser}} to be used to produce report
+#' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}} to be used to produce report
+#' @param reportFullfilename location on disk where to save the generated report
 #' @param isCheckReport TRUE to generate a check report must be generated, FALSE to generate a full report
 #' @author M.Beauvais
 #' @export
-generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
+generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckReport){
   numberOfModelsPerPage=3
   
   if (missing(isCheckReport)) {
     isCheckReport = TRUE
   }
   
-  # load AFMImageAnalyser in rda format
-  print(paste("loading", basename(oneAFMImageAnalyserFile)))
+  AFMImage<-AFMImageAnalyser@AFMImage
   
-  x = load(file = oneAFMImageAnalyserFile)
-  AFMImageAnalyser= get(x)
-  rm(x)
-  
-  fullfilename <- AFMImageAnalyser@fullfilename
-  sampleName<-basename(AFMImageAnalyser@fullfilename)
-  reportDirectory<-dirname(oneAFMImageAnalyserFile)
+  #   # load AFMImageAnalyser in rda format
+  #   print(paste("loading", basename(oneAFMImageAnalyserFile)))
+  #   
+  #   x = load(file = oneAFMImageAnalyserFile)
+  #   AFMImageAnalyser= get(x)
+  #   rm(x)
+  #   
+  fullfilename <- AFMImageAnalyser@AFMImage@fullfilename
+  sampleName<-basename(AFMImageAnalyser@AFMImage@fullfilename)
+  reportDirectory=dirname(AFMImageAnalyser@fullfilename)
   createReportDirectory(reportDirectory)
+  #   
+  #   # load image in rda format
+  #   afmImageFullfilename<-paste(dirname(oneAFMImageAnalyserFile) ,paste(sampleName, "AFMImage.rda", sep="-"),sep="/")
+  #   print(paste("loading", basename(afmImageFullfilename)))
+  #   x = load(file = afmImageFullfilename)
+  #   AFMImage= get(x)
+  #   rm(x)
+  #   
+  #   
+  #   
+  #   print(paste("processing image", sampleName))
+  #   
   
-  # load image in rda format
-  afmImageFullfilename<-paste(dirname(oneAFMImageAnalyserFile) ,paste(sampleName, "AFMImage.rda", sep="-"),sep="/")
-  print(paste("loading", basename(afmImageFullfilename)))
-  x = load(file = afmImageFullfilename)
-  AFMImage= get(x)
-  rm(x)
   
-  print(paste("processing image", sampleName))
   
   # save all images necessary for the report on disk
   putImagesFromAnalysisOnDisk(AFMImageAnalyser, AFMImage, reportDirectory)
@@ -219,19 +232,21 @@ generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
   if (!length(AFMImageAnalyser@variogramAnalysis@variogramModels)==0) {
     
     mergedDT<-getDTModelEvaluation(AFMImageAnalyser@variogramAnalysis)
-    #print(mergedDT)
+    print(mergedDT)
     
     sillrangeDT<-getDTModelSillRange(AFMImageAnalyser@variogramAnalysis)
     setkey(sillrangeDT, "model")
     name<-press<-NULL
-    sampleDT <- mergedDT[name==basename(fullfilename)]
+    sampleDT <- mergedDT[name==basename(AFMImageAnalyser@AFMImage@fullfilename)]
     setkey(sampleDT, "model")
     #sampleDT <- sampleDT[cor>0.98]
     sampleDT<-merge(sampleDT, sillrangeDT, by="model")
     sampleDT<-sampleDT[,name:=NULL]
     sampleDT <- unique(sampleDT)
     sampleDT <- sampleDT[order(-rank(cor), rank(press))]
-    #print(sampleDT)
+    print(basename(AFMImageAnalyser@AFMImage@fullfilename))
+    print(basename(AFMImageAnalyser@fullfilename))
+    print(sampleDT)
     
     
     summarySampleDT<-copy(sampleDT)
@@ -242,37 +257,58 @@ generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
     print("plotting variogram table...")
     existsVariogramModel<-TRUE
     if (nrow(sampleDT)!=0) {
-      plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT)
+      plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT, 
+                                                           removeRowNames=TRUE, 
+                                                           removeColNames=FALSE)
     }else{
       print("no good variogram table...")  
       existsVariogramModel<-FALSE
       sampleDT <- mergedDT[name==basename(fullfilename)]
       sampleDT <- unique(sampleDT)
       sampleDT <- sampleDT[order(-rank(cor), rank(press))]
-      plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT)
+      plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT, 
+                                                           removeRowNames=TRUE, 
+                                                           removeColNames=FALSE)
     }
     #print(plotBestVariogramModelsTable)
   }
   
-  if (!isCheckReport) reportName<-paste(reportDirectory, paste(sampleName,"fullreport.pdf",sep="-"),sep="/")
-  else reportName<-paste(reportDirectory, paste(sampleName,"checkreport.pdf",sep="-"),sep="/")
   
-  print(paste("creating", basename(reportName), "..."))
-  pdf(reportName, width=8.27, height=11.69)
+  print(paste("creating", basename(reportFullfilename), "..."))
+  pdf(reportFullfilename, width=8.27, height=11.69)
   
   # first page
   rglImagefullfilename<-get3DImageFullfilename(reportDirectory, sampleName)
   print(paste("reading", basename(rglImagefullfilename), "..."))
   img <- readPNG(rglImagefullfilename)
   
+  roughnesses<-getRoughnessParameters(AFMImageAnalyser@AFMImage)  
+  basicImageInfo<-data.table(name=c("Scan size",
+                                    "Samples per line",
+                                    "Lines",
+                                    "Total Rrms",
+                                    "Ra (mean roughness)"),
+                             values=c(paste(AFMImageAnalyser@AFMImage@scansize,"nm"),
+                                      paste(as.character(AFMImageAnalyser@AFMImage@samplesperline)),
+                                      paste(as.character(AFMImageAnalyser@AFMImage@lines)),
+                                      paste(round(roughnesses$totalRMSRoughness_TotalRrms, digits=4),"nm"),
+                                      paste(round(roughnesses$MeanRoughness_Ra, digits=4),"nm")))
+  imageInformationDTPlot<-getGgplotFromDataTable(basicImageInfo,
+                                                 removeRowNames= TRUE,
+                                                 removeColNames=TRUE)
+  
   grid.newpage() # Open a new page on grid device
-  pushViewport(viewport(layout = grid.layout(4, 4)))
+  pushViewport(viewport(layout = grid.layout(5, 4)))
   
   vp1<-viewport(layout.pos.row = 2:3, layout.pos.col = 1:4)
   grid.raster(img,vp=vp1)
   
   vp0<-viewport(layout.pos.row = 1, layout.pos.col = 2:3)
   grid.text(sampleName,  vp=vp0, gp=gpar(fontsize=20, col="black"))
+  
+  vp2<-viewport(layout.pos.row = 4:5, layout.pos.col = 1:4)
+  print(imageInformationDTPlot,vp=vp2)
+  
   
   # page for checking
   # normality / omni direction of samples
@@ -307,9 +343,9 @@ generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
     print(paste("reading",basename(sampleSpplotfullfilename)))
     sampleImg <- readPNG(sampleSpplotfullfilename)
     
-    sampleSpplotfullfilename<-getVarioPngChosenSample(reportDirectory, sampleName)
+    sampleSpplotfullfilename<-getVarioPngchosenFitSample(reportDirectory, sampleName)
     print(paste("reading",basename(sampleSpplotfullfilename)))
-    chosenSampleImg <- readPNG(sampleSpplotfullfilename)
+    chosenFitSampleImg <- readPNG(sampleSpplotfullfilename)
     
     
     vp0<-  viewport(layout.pos.row = 1, layout.pos.col = 1:2)
@@ -321,9 +357,9 @@ generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
     #grid.text("Original",  vp=vp3, gp=gpar(fontsize=10, col="black"))
     
     vp2<-  viewport(layout.pos.row = 2:3, layout.pos.col = 2)
-    grid.raster(chosenSampleImg,vp=vp2)
+    grid.raster(chosenFitSampleImg,vp=vp2)
     #vp4<-viewport(layout.pos.row = 9, layout.pos.col = 2)
-    #grid.text("Sample",  vp=vp4, gp=gpar(fontsize=10, col="black"))
+    #grid.text("Sample",  vp=vp4, gp=gpar(fontsize=10, col="black"))    
     
     # best variogram models page
     if (!length(AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram)==0) {
@@ -331,175 +367,58 @@ generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
       vp5<-viewport(layout.pos.row = 4:7, layout.pos.col = 1:2)
       print(plotBestVariogramModelsTable,vp=vp5)
       
-      #####################
-      # new page for experimental variogram and models
-      experimentalVariogramDT<-AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram
-      experimentalVariogramDT$name<-"Experimental"
-      #drops <- c("dir.hor","dir.ver","id","np")
-      experimentalVariogramDT<-experimentalVariogramDT[,c("dir.hor","dir.ver","id","np"):=NULL]
-      #names(experimentalVariogramDT)
-      
-      # experimental variogram 
-      if(existsVariogramModel){
-        sampleSpplotfullfilename<-getSpplotImagefullfilename(reportDirectory, sampleName)
-        print(paste("reading",basename(sampleSpplotfullfilename)))
-        sampleImg <- readPNG(sampleSpplotfullfilename)
-        
-        allVarioModels<-str_sub(sampleDT$model,-3)
-        
-        for (i in seq(1:length(allVarioModels))) {
-          indexInPage<-i%%numberOfModelsPerPage
-          
-          if (indexInPage==1) {
-            # Open a new page
-            grid.newpage() 
-            pushViewport(viewport(layout = grid.layout(numberOfModelsPerPage*2, 3)))
-          }
-          if (indexInPage==0)indexInPage=numberOfModelsPerPage
-          
-          #print(indexInPage)
-          
-          #plot experimental variogram and model variogram
-          vp1<-viewport(layout.pos.row = (indexInPage-1)*2+1, layout.pos.col = 2)
-          grid.raster(sampleImg,vp=vp1)
-          
-          
-          
-          #print(i)
-          
-          allVariogramModelEvaluation<-AFMImageAnalyser@variogramAnalysis@variogramModels
-          for (j in seq(1:length(allVariogramModelEvaluation))) {
-            if (allVariogramModelEvaluation[j][[1]]@fit.v[2]$model==allVarioModels[i]) break;
-          }
-          #print(j)
-          #print(allVariogramModelEvaluation[j][[1]]@fit.v[2]$model)
-          
-          predictedfullfilename<-getSpplotPredictedImageFullfilename(reportDirectory, sampleName, allVarioModels[i])
-          
-          #         # save image on disk
-          #         mykrige<-allVariogramModelEvaluation[j][[1]]@mykrige
-          #         part_valid_pr<-mykrige@data
-          #         cuts<-AFMImageAnalyser@variogramAnalysis@cuts
-          #         modelName<-allVariogramModelEvaluation[j][[1]]@model
-          #         saveSpplotFromKrige(predictedfullfilename, modelName, mykrige, cuts, FALSE) 
-          #         
-          # read image on disk
-          print(paste("reading", basename(predictedfullfilename)))
-          samplePredictedImg <- readPNG(predictedfullfilename)
-          vp2<-viewport(layout.pos.row = (indexInPage-1)*2+1, layout.pos.col = 3)
-          grid.raster(samplePredictedImg,vp=vp2)
-          
-          ang1<-ang2<-ang3<-anis1<-anis2<-name<-NULL
-          fit.v<-allVariogramModelEvaluation[j][[1]]@fit.v
-          vgm1<-vgm(fit.v[2]$psill, fit.v[2]$model, fit.v[2]$range, kappa = fit.v[2]$kappa, anis = c(fit.v[2]$anis1, fit.v[2]$anis2), add.to = vgm(fit.v[1]$psill, fit.v[1]$model, fit.v[1]$range,kappa = fit.v[1]$kappa,anis = c(fit.v[1]$anis1, fit.v[1]$anis2)))
-          newModelDT<-data.table(vgm1)
-          setnames(newModelDT, "psill", "sill" )
-          newModelDT<-rbind(newModelDT, sampleDT[i], fill=TRUE)
-          newModelDT<- newModelDT[, ang1:=NULL]
-          newModelDT<- newModelDT[, ang2:=NULL]
-          newModelDT<- newModelDT[, ang3:=NULL]
-          newModelDT<- newModelDT[, anis1:=NULL]
-          newModelDT<- newModelDT[, anis2:=NULL]
-          
-          
-          plotVariogramModelTable<-getGgplotFromDataTable(newModelDT[,name:=NULL])
-          vp4<-viewport(layout.pos.row = (indexInPage-1)*2+1+1, layout.pos.col = 2:3)
-          print(plotVariogramModelTable,vp=vp4)
-          
-          # variogram from model
-          myvgm<-experimentalVariogramDT
-          experimentalVariogramDTnrow=nrow(myvgm)
-          class(myvgm) = c("gstatVariogram", "data.frame")
-          myvgm$np=rep(1,experimentalVariogramDTnrow)
-          myvgm$dir.hor=rep(0,experimentalVariogramDTnrow)
-          myvgm$dir.ver=rep(0,experimentalVariogramDTnrow)
-          myvgm$id=rep(factor("var1"),experimentalVariogramDTnrow)
-          
-          begin<-(indexInPage-1)*2+1
-          vp3<-viewport(layout.pos.row = begin:(begin+1), layout.pos.col = 1)
-          vgLine <- rbind(
-            cbind(variogramLine(vgm1, maxdist = max(myvgm$dist)), id = "Raw")
-          )
-          p1<-ggplot(myvgm, aes(x = dist, y = gamma, colour = id)) +  geom_line(data = vgLine) + geom_point()   
-          p1 <- p1 + ylab("semivariance")
-          p1 <- p1 + xlab("distance (nm)")
-          p1 <- p1 + ggtitle("Semivariogram")
-          p1 <- p1 + guides(colour=FALSE)
-          p1 <- p1 + expand_limits(y = 0)
-          print(p1,vp=vp3)
-          
-        }
-      }else{
-        grid.newpage() 
-        pushViewport(viewport(layout = grid.layout(2, 4)))
-        
-        
-        myvgm<-experimentalVariogramDT
-        experimentalVariogramDTnrow=nrow(myvgm)
-        class(myvgm) = c("gstatVariogram", "data.frame")
-        myvgm$np=rep(1,experimentalVariogramDTnrow)
-        myvgm$dir.hor=rep(0,experimentalVariogramDTnrow)
-        myvgm$dir.ver=rep(0,experimentalVariogramDTnrow)
-        myvgm$id=rep(factor("var1"),experimentalVariogramDTnrow)
-        
-        vp1<-viewport(layout.pos.row = 1, layout.pos.col = 2:3)
-        
-        p1<-ggplot(myvgm, aes(x = dist, y = gamma, colour = id)) + geom_point()   
-        p1 <- p1 + ylab("semivariance")
-        p1 <- p1 + xlab("distance (nm)")
-        p1 <- p1 + ggtitle("Semivariogram")
-        p1 <- p1 + guides(colour=FALSE)
-        p1 <- p1 + expand_limits(y = 0)
-        print(p1,vp=vp1)
-      }
+      printVariogramModelEvaluations(AFMImageAnalyser, sampleDT, numberOfModelsPerPage)
     }
     
-    # Roughness against length scale
-    if (!length(AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale)==0) {
-      
-      grid.newpage() # Open a new page on grid device
-      pushViewport(viewport(layout = grid.layout(7, 2)))
-      
-      vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:2)
-      grid.text("Roughness vs. lengthscale",  vp=vp0, gp=gpar(fontsize=20, col="black"))
-      
-      exportCsvFullFilename<-getRoughnessAgainstLengthscale(reportDirectory, sampleName)
-      
-      print(paste("reading",basename(exportCsvFullFilename)))
-      samplePredictedImg <- readPNG(exportCsvFullFilename)
-      vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 1)
-      grid.raster(samplePredictedImg,vp=vp1)
-      
-      exportCsvFullFilename<-getRoughnessAgainstLengthscale10nm(reportDirectory, sampleName)
-      print(paste("reading",basename(exportCsvFullFilename)))
-      samplePredictedImg <- readPNG(exportCsvFullFilename)
-      vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 2)
-      grid.raster(samplePredictedImg,vp=vp1)
-      
-      
-      for(i in c(0,1)) {
-        exportpng2FullFilename=getRoughnessAgainstLengthscaleIntersection(reportDirectory, paste(sampleName,i*2,sep="-"))
-        if (file.exists(exportpng2FullFilename)) {
-          print("intersection inserted...")  
-          
-          img<-readPNG(exportpng2FullFilename)
-          vp2<-viewport(layout.pos.row = 5:7, layout.pos.col = i+1)
-          
-          grid.raster(img,vp=vp2)
-        }
+  }
+  
+  # Roughness against length scale
+  if (!length(AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale)==0) {
+    
+    grid.newpage() # Open a new page on grid device
+    pushViewport(viewport(layout = grid.layout(7, 2)))
+    
+    vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:2)
+    grid.text("Roughness vs. lengthscale",  vp=vp0, gp=gpar(fontsize=20, col="black"))
+    
+    exportCsvFullFilename<-getRoughnessAgainstLengthscale(reportDirectory, sampleName)
+    
+    print(paste("reading",basename(exportCsvFullFilename)))
+    samplePredictedImg <- readPNG(exportCsvFullFilename)
+    vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 1)
+    grid.raster(samplePredictedImg,vp=vp1)
+    
+    exportCsvFullFilename<-getRoughnessAgainstLengthscale10nm(reportDirectory, sampleName)
+    print(paste("reading",basename(exportCsvFullFilename)))
+    samplePredictedImg <- readPNG(exportCsvFullFilename)
+    vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 2)
+    grid.raster(samplePredictedImg,vp=vp1)
+    
+    
+    for(i in c(0,1)) {
+      exportpng2FullFilename=getRoughnessAgainstLengthscaleIntersection(reportDirectory, paste(sampleName,i*2,sep="-"))
+      if (file.exists(exportpng2FullFilename)) {
+        print("intersection inserted...")  
+        
+        img<-readPNG(exportpng2FullFilename)
+        vp2<-viewport(layout.pos.row = 5:7, layout.pos.col = i+1)
+        
+        grid.raster(img,vp=vp2)
       }
     }
+  }
+  
+  # export fractal dimension
+  if (!length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)==0) {
+    grid.newpage() # Open a new page on grid device
+    pushViewport(viewport(layout = grid.layout(7, 4)))
     
-    # export fractal dimension
-    if (!length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)==0) {
-      grid.newpage() # Open a new page on grid device
-      pushViewport(viewport(layout = grid.layout(7, 4)))
-      
-      vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:4)
-      grid.text("Fractal dimension analysis",  vp=vp0, gp=gpar(fontsize=20, col="black"))
-      
-      n=length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)
-      
+    vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:4)
+    grid.text("Fractal dimension analysis",  vp=vp0, gp=gpar(fontsize=20, col="black"))
+    
+    n=length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)
+    print(n)
+    if (n>0) {
       sampleDT <- data.table( 
         fd_method= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd_method)),
         fd= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd)),
@@ -536,8 +455,8 @@ generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
         vp6<-viewport(layout.pos.row = 6:7, layout.pos.col = 1:2)
         grid.raster(img,vp=vp6)
       }
-      
     }
+    
   }
   dev.off()
   rm(AFMImageAnalyser)
@@ -545,7 +464,138 @@ generateAFMImageReport<-function(oneAFMImageAnalyserFile, isCheckReport){
 }
 
 
-getGgplotFromDataTable<-function(DT) {
+#' @title printVariogramModelEvaluations
+#' 
+#' @description \code{printVariogramModelEvaluations} generates a graphic element containing the evaluation of all variogram models
+#'
+#' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}} to be used to produce report
+#' @param numberOfModelsPerPage numeric to specify the number of model evaluations per pages
+#' @param sampleDT a data.table containg the evaluation information
+#' @author M.Beauvais
+#' @export
+printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfModelsPerPage){
+  
+  #####################
+  # new page for experimental variogram and models
+  experimentalVariogramDT<-AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram
+  experimentalVariogramDT$name<-"Experimental"
+  #drops <- c("dir.hor","dir.ver","id","np")
+  experimentalVariogramDT<-experimentalVariogramDT[,c("dir.hor","dir.ver","id","np"):=NULL]
+  #names(experimentalVariogramDT)
+  
+  sampleName<-basename(AFMImageAnalyser@AFMImage@fullfilename)
+  
+  sampleSpplotfullfilename<-getSpplotImagefullfilename(tempdir(), sampleName)
+  saveSpplotFromAFMImage(AFMImageAnalyser@AFMImage, sampleSpplotfullfilename, withoutLegend=TRUE)
+  #print(paste("reading",basename(sampleSpplotfullfilename)))
+  #sampleImg<-getSpplotFromAFMImage(AFMImage=AFMImageAnalyser@AFMImage, expectedWidth=80, expectHeight=60, withoutLegend=TRUE)
+  sampleImg <- readPNG(sampleSpplotfullfilename)
+  
+  
+  
+  allVarioModels<-str_sub(sampleDT$model,-3)
+  for (i in seq(1:length(allVarioModels))) {
+    indexInPage<-i%%numberOfModelsPerPage
+    
+    if (indexInPage==1) {
+      # Open a new page
+      grid.newpage() 
+      pushViewport(viewport(layout = grid.layout(numberOfModelsPerPage*2, 3)))
+    }
+    if (indexInPage==0)indexInPage=numberOfModelsPerPage
+    
+    #print(indexInPage)
+    
+    #plot experimental variogram and model variogram
+    vp1<-viewport(layout.pos.row = (indexInPage-1)*2+1, layout.pos.col = 2)
+    grid.raster(sampleImg,vp=vp1)
+    
+#     pushViewport(vp1)
+#     print(sampleImg,newpage=FALSE)
+#     popViewport(1)
+    
+    
+    
+    #print(i)
+    
+    allVariogramModelEvaluation<-AFMImageAnalyser@variogramAnalysis@variogramModels
+    for (j in seq(1:length(allVariogramModelEvaluation))) {
+      if (allVariogramModelEvaluation[j][[1]]@fit.v[2]$model==allVarioModels[i]) break;
+    }
+    #print(j)
+    #print(allVariogramModelEvaluation[j][[1]]@fit.v[2]$model)
+    #predictedfullfilename<-getSpplotPredictedImageFullfilename(reportDirectory, sampleName, allVarioModels[i])
+    
+    
+    modelName<-allVariogramModelEvaluation[j][[1]]@fit.v[2]$model
+    part_valid_pr<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@mykrige
+    cuts<-AFMImageAnalyser@variogramAnalysis@cuts
+    withoutLegend<-TRUE
+    colLimit<-length(cuts)+3
+    cols <- getSpplotColors(colLimit) 
+    
+    predictedspplotfullfilename<-getSpplotPredictedImageFullfilename(tempdir(), sampleName, modelName)
+    saveSpplotFromKrige(predictedspplotfullfilename, modelName, part_valid_pr,cuts, withoutLegend = TRUE)  
+    # TODO save on disk as png and read
+
+    # read image on disk
+    #print(paste("reading", basename(predictedspplotfullfilename)))
+    samplePredictedImg <- readPNG(predictedspplotfullfilename)
+    #samplePredictedImg<-spplot(part_valid_pr["var1.pred"], cuts=cuts, col.regions=cols,key=list(lines=FALSE, col="transparent"))
+
+    vp2<-viewport(layout.pos.row = (indexInPage-1)*2+1, layout.pos.col = 3)
+    grid.raster(samplePredictedImg,vp=vp2)
+#     pushViewport(vp2)
+#     print(samplePredictedImg,newpage=FALSE)
+#     popViewport(1)
+    
+    ang1<-ang2<-ang3<-anis1<-anis2<-name<-NULL
+    fit.v<-allVariogramModelEvaluation[j][[1]]@fit.v
+    vgm1<-vgm(fit.v[2]$psill, fit.v[2]$model, fit.v[2]$range, kappa = fit.v[2]$kappa, anis = c(fit.v[2]$anis1, fit.v[2]$anis2), add.to = vgm(fit.v[1]$psill, fit.v[1]$model, fit.v[1]$range,kappa = fit.v[1]$kappa,anis = c(fit.v[1]$anis1, fit.v[1]$anis2)))
+    newModelDT<-data.table(vgm1)
+    setnames(newModelDT, "psill", "sill" )
+    newModelDT<-rbind(newModelDT, sampleDT[i], fill=TRUE)
+    newModelDT<- newModelDT[, ang1:=NULL]
+    newModelDT<- newModelDT[, ang2:=NULL]
+    newModelDT<- newModelDT[, ang3:=NULL]
+    newModelDT<- newModelDT[, anis1:=NULL]
+    newModelDT<- newModelDT[, anis2:=NULL]
+    
+    
+    plotVariogramModelTable<-getGgplotFromDataTable(newModelDT[,name:=NULL])
+    vp4<-viewport(layout.pos.row = (indexInPage-1)*2+1+1, layout.pos.col = 2:3)
+    print(vp=vp4, plotVariogramModelTable, row.names= FALSE, include.rownames=FALSE)
+    
+    # variogram from model
+    myvgm<-experimentalVariogramDT
+    experimentalVariogramDTnrow=nrow(myvgm)
+    class(myvgm) = c("gstatVariogram", "data.frame")
+    myvgm$np=rep(1,experimentalVariogramDTnrow)
+    myvgm$dir.hor=rep(0,experimentalVariogramDTnrow)
+    myvgm$dir.ver=rep(0,experimentalVariogramDTnrow)
+    myvgm$id=rep(factor("var1"),experimentalVariogramDTnrow)
+    
+    begin<-(indexInPage-1)*2+1
+    vp3<-viewport(layout.pos.row = begin:(begin+1), layout.pos.col = 1, width=200, height=200)
+    vgLine <- rbind(
+      cbind(variogramLine(vgm1, maxdist = max(myvgm$dist)), id = "Raw")
+    )
+    p1<-ggplot(myvgm, aes(x = dist, y = gamma, colour = id)) +  geom_line(data = vgLine) + geom_point()   
+    p1 <- p1 + ylab("semivariance")
+    p1 <- p1 + xlab("distance (nm)")
+    p1 <- p1 + ggtitle("Semivariogram")
+    p1 <- p1 + guides(colour=FALSE)
+    p1 <- p1 + expand_limits(y = 0)
+    print(p1,vp=vp3)
+    
+  }
+  
+}
+
+getGgplotFromDataTable<-function(DT, removeRowNames, removeColNames) {
+  if (missing(removeRowNames)) removeRowNames<-TRUE
+  if (missing(removeColNames)) removeColNames<-FALSE
+  
   mytheme <- gridExtra::ttheme_default(
     core = list(fg_params=list(cex = 0.8)),
     colhead = list(fg_params=list(cex = 0.9)),
@@ -553,9 +603,20 @@ getGgplotFromDataTable<-function(DT) {
   
   qplotFromDataTable<- qplot(1:10, 1:10, geom = "blank") + 
     theme_bw() +
-    theme(line = element_blank(), text = element_blank()) +
-    annotation_custom(grob = tableGrob(DT,  theme = mytheme))
-  #, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf))
+    theme(line = element_blank(), text = element_blank())
+  if ((removeRowNames)&&(removeColNames)) {
+    qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, rows = NULL, cols=NULL))
+  }else{
+    if (removeRowNames) {
+      qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, rows = NULL))
+    }else{
+      if (removeColNames) {
+        qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, cols = NULL))
+      }else{
+        qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme))
+      }
+    }
+  }
   
   return(qplotFromDataTable)
 }
@@ -655,19 +716,19 @@ exportVariogramImagesForReport<- function(AFMImageAnalyser, AFMImage, exportDire
     # chosen sample plot
     TheData<-as.data.frame(AFMImage@data)
     TheData=na.omit(TheData)
-    part_model <- TheData[AFMImageAnalyser@variogramAnalysis@chosenSample, ]
+    part_model <- TheData[AFMImageAnalyser@variogramAnalysis@chosenFitSample, ]
     coordinates(part_model) = ~x+y
     proj4string(part_model)=CRS("+init")
     is.projected(part_model)
     
-    pChosenSample<-spplot(part_model, col.regions="black",contour=TRUE,key=list(lines=FALSE, col="transparent"))
+    pchosenFitSample<-spplot(part_model, col.regions="black",contour=TRUE,key=list(lines=FALSE, col="transparent"))
     expectedWidth = 400
     expectHeight = 300
     
-    exportpngFullFilename<-getVarioPngChosenSample(exportDirectory, sampleName)
+    exportpngFullFilename<-getVarioPngchosenFitSample(exportDirectory, sampleName)
     print(paste("saving", basename(exportpngFullFilename)))
     png(filename=exportpngFullFilename, units = "px", width=expectedWidth, height=expectHeight)
-    print(pChosenSample)
+    print(pchosenFitSample)
     dev.off()
     
     # save images from variogram modeling
@@ -775,9 +836,4 @@ isReportDirectoryWritePermissionCorrect<-function(reportDirectory) {
     close(fileConn)
     return(FALSE)
   }) 
-}
-
-getLoadedLibrary<-function() {
-  loadedLib<-search()
-  installed.packages()[1:5,] 
 }

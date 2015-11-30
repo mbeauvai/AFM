@@ -140,11 +140,7 @@ AFMImageVariogramAnalysis<-setClass("AFMImageVariogramAnalysis",
 setMethod("initialize",
           "AFMImageVariogramAnalysis",
           function(.Object, sampleFitPercentage, updateProgress) {
-            if (missing(updateProgress)) {
-              print("missing")
-              #.Object@updateProgress<-
-            }else{
-              print("not missing")
+            if (!missing(updateProgress)) {
               .Object@updateProgress<-updateProgress  
             }
             .Object@sampleFitPercentage <- sampleFitPercentage
@@ -828,6 +824,11 @@ getSpplotFromAFMImage<-function(AFMImage, expectedWidth, expectHeight, withoutLe
   }else{
     p<-spplot(initialAFMImage["h"], cuts=cuts, col.regions=cols)
   }
+  
+  initialAFMImage.lowres <- aggregate(initialAFMImage["h"], fact = 2, fun = mean)
+  
+  
+  
   return(p)
 }
 

@@ -41,13 +41,13 @@ AFMImageFractalDimensionMethod<-setClass("AFMImageFractalDimensionMethod",
 setMethod(f= "initialize", 
           signature= "AFMImageFractalDimensionMethod", 
           definition= function(.Object, fd_method, fd, fd_scale)
-{
-  .Object@fd_method<-fd_method
-  .Object@fd<-fd
-  .Object@fd_scale<-fd_scale
-  validObject(.Object)      
-  return(.Object)
-})
+          {
+            .Object@fd_method<-fd_method
+            .Object@fd<-fd
+            .Object@fd_scale<-fd_scale
+            validObject(.Object)      
+            return(.Object)
+          })
 
 #' Wrapper function AFMImageFractalDimensionMethod
 #' 
@@ -64,6 +64,7 @@ AFMImageFractalDimensionMethod <- function(fd_method, fd, fd_scale) {
 #'
 #' @slot fractalDimensionMethods a list of \code{\link{AFMImageFractalDimensionMethod}}
 #' @slot csvFullfilename To be removed ?
+#' @slot updateProgress a function to update a graphical user interface
 #' @name AFMImageFractalDimensionsAnalysis-class
 #' @rdname AFMImageFractalDimensionsAnalysis-class
 #' @exportClass AFMImageFractalDimensionsAnalysis
@@ -71,7 +72,8 @@ AFMImageFractalDimensionMethod <- function(fd_method, fd, fd_scale) {
 #'
 AFMImageFractalDimensionsAnalysis<-setClass("AFMImageFractalDimensionsAnalysis",
                                             slots = c(fractalDimensionMethods="list", 
-                                                      csvFullfilename="character"))
+                                                      csvFullfilename="character",
+                                                      updateProgress="function"))
 
 #' Constructor method of AFMImageFractalDimensionsAnalysis Class.
 #'
@@ -126,7 +128,8 @@ setReplaceMethod(f="fractalDimensionMethods",
 #'
 #' \code{getFractalDimensions} calculates fractal dimensions and scales of an \code{\link{AFMImage}} with \code{\link[fractaldim]{fd.estim.method}} from the \code{\link{fractaldim}} package.
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
-#' @return a data.table with the calculated fractal dimensions and scales
+#' @param AFMImageFractalDimensionsAnalysis an \code{\link{AFMImageFractalDimensionsAnalysis}} to store the results of the fractal analysis
+#' @return a list of \code{\link{AFMImageFractalDimensionMethod}} objects with the calculated fractal dimensions and scales
 #' @references  Gneiting2012, Tilmann Gneiting, Hana Sevcikova and Donald B. Percival 'Estimators of Fractal Dimension: Assessing the Roughness of Time Series and Spatial Data - Statistics in statistical Science, 2012, Vol. 27, No. 2, 247-277'
 #' @author M.Beauvais
 #' @rdname AFMFractalDimensionAnalyser-getFractalDimensions
@@ -138,32 +141,86 @@ setReplaceMethod(f="fractalDimensionMethods",
 #' data(AFMImageOfAluminiumInterface)
 #' print(getFractalDimensions(AFMImageOfAluminiumInterface))
 #
-getFractalDimensions<-function(AFMImage) {
+getFractalDimensions<-function(AFMImage, AFMImageFractalDimensionsAnalysis) {
+  if (missing(AFMImageFractalDimensionsAnalysis)) {
+    AFMImageFractalDimensionsAnalysis<-NULL
+  }
+  graphicalUpdate<-FALSE
+  if (!is.null(AFMImageFractalDimensionsAnalysis)&&
+      !is.null(AFMImageFractalDimensionsAnalysis@updateProgress)&&
+      is.function(AFMImageFractalDimensionsAnalysis@updateProgress)&&
+      !is.null(AFMImageFractalDimensionsAnalysis@updateProgress())) {
+    graphicalUpdate<-TRUE
+    
+  }
+  if (graphicalUpdate) {
+    AFMImageFractalDimensionsAnalysis@updateProgress(message="1/2 - Calculating table", value=0)
+  }
   
+  totalLength <- 8
+  counter<-0
+  
+  if (graphicalUpdate) {
+    counter<-counter+1
+    value<-counter / totalLength
+    text <- paste0(round(counter, 2),"/",totalLength)
+    AFMImageFractalDimensionsAnalysis@updateProgress(value= 0, detail = text)
+  }
   rf2d <- matrix(AFMImage@data$h, nrow=AFMImage@samplesperline)
   fullfilename<-AFMImage@fullfilename
   
+  if (graphicalUpdate) {
+    counter<-counter+1
+    value<-counter / totalLength
+    text <- paste0(round(counter, 2),"/",totalLength)
+    AFMImageFractalDimensionsAnalysis@updateProgress(value= 0, detail = text)
+  }
   fd2d_transectvar <- fd.estim.transect.var(rf2d, p.index = 1, direction='hvd+d-')
+  
+  if (graphicalUpdate) {
+    counter<-counter+1
+    value<-counter / totalLength
+    text <- paste0(round(counter, 2),"/",totalLength)
+    AFMImageFractalDimensionsAnalysis@updateProgress(value= 0, detail = text)
+  }
   fd2d_transectincr1 <- fd.estim.transect.incr1(rf2d, p.index = 1, direction='hvd+d-')
+  
+  if (graphicalUpdate) {
+    counter<-counter+1
+    value<-counter / totalLength
+    text <- paste0(round(counter, 2),"/",totalLength)
+    AFMImageFractalDimensionsAnalysis@updateProgress(value= 0, detail = text)
+  }
   fd2d_isotropic <- fd.estim.isotropic(rf2d, p.index = 1, direction='hvd+d-')
-  #print(fd2d_isotropic)
-  #summary(fd2d_isotropic)
+  
+  if (graphicalUpdate) {
+    counter<-counter+1
+    value<-counter / totalLength
+    text <- paste0(round(counter, 2),"/",totalLength)
+    AFMImageFractalDimensionsAnalysis@updateProgress(value= 0, detail = text)
+  }
   fd2d_squareincr <- fd.estim.squareincr(rf2d, p.index = 1)
+  
+  if (graphicalUpdate) {
+    counter<-counter+1
+    value<-counter / totalLength
+    text <- paste0(round(counter, 2),"/",totalLength)
+    AFMImageFractalDimensionsAnalysis@updateProgress(value= 0, detail = text)
+  }
   fd2d_filter1 <- fd.estim.filter1(rf2d, p.index = 1)
   
-  
-  
+  if (graphicalUpdate) {
+    counter<-counter+1
+    value<-counter / totalLength
+    text <- paste0(round(counter, 2),"/",totalLength)
+    AFMImageFractalDimensionsAnalysis@updateProgress(value= 0, detail = text)
+  }
   res=c(new("AFMImageFractalDimensionMethod", fd_method = "isotropic", fd = fd2d_isotropic$fd , fd_scale = fd2d_isotropic$scale))
   res=c(res, new("AFMImageFractalDimensionMethod", fd_method = "transectvar", fd = fd2d_transectvar$fd, fd_scale = fd2d_transectvar$scale))
   res=c(res, new("AFMImageFractalDimensionMethod", fd_method = "transectincr1", fd = fd2d_transectincr1$fd, fd_scale = fd2d_transectincr1$scale))
   res=c(res, new("AFMImageFractalDimensionMethod", fd_method = "squareincr", fd = fd2d_squareincr$fd, fd_scale = fd2d_squareincr$scale))
   res=c(res, new("AFMImageFractalDimensionMethod", fd_method = "filter1", fd = fd2d_filter1$fd, fd_scale = fd2d_filter1$scale))
   
-  #   res = data.table(name=basename(fullfilename), method = "isotropic", fd = fd2d_isotropic$fd , scale = fd2d_isotropic$scale)
-  #   res = rbind(res, data.table(name=basename(fullfilename) , method = "transectvar", fd = fd2d_transectvar$fd, scale = fd2d_transectvar$scale))
-  #   res = rbind(res, data.table(name=basename(fullfilename) , method = "transectincr1", fd = fd2d_transectincr1$fd, scale = fd2d_transectincr1$scale))
-  #   res = rbind(res, data.table(name=basename(fullfilename) , method = "squareincr", fd = fd2d_squareincr$fd, scale = fd2d_squareincr$scale))
-  #   res = rbind(res, data.table(name=basename(fullfilename) , method = "filter1", fd = fd2d_filter1$fd, scale = fd2d_filter1$scale))
   return(res)
 }
 

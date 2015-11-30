@@ -17,8 +17,6 @@ require(reshape2)
 
 require(stats)
 
-#source("R/AFMImage.R")
-
 if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("r", "roughness","x","predict.gstat"))
 
 #' @title AFM image Power Spectrum Density analysis class
@@ -27,12 +25,20 @@ if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("r", "roughness","x",
 #'
 #' @slot roughnessAgainstLengthscale a data.table to store the roughness against lengthscale data
 #' @slot intersections a list to store the lengthscales values as the intersections between slopes and the sill in roughness against lenghscale graph
+#' @slot updateProgress a function to update a graphical user interface
 #' @name AFMImagePSDAnalysis-class
 #' @rdname AFMImagePSDAnalysis-class
 #' @author M.Beauvais
 AFMImagePSDAnalysis<-setClass("AFMImagePSDAnalysis",
-                              slots = c(roughnessAgainstLengthscale="data.table",
-                                        intersections="numeric"),
+                              slots = c(
+                                psd1d_breaks="numeric",
+                                psd2d_truncHighLengthScale="logical",
+                                psd2d_maxHighLengthScale="numeric",
+                                psd1d="data.table",
+                                psd2d="data.table",
+                                roughnessAgainstLengthscale="data.table",
+                                intersections="numeric",
+                                updateProgress="function"),
                               validity = function(object) { 
                                 return(TRUE)
                               }
@@ -46,6 +52,11 @@ AFMImagePSDAnalysis<-setClass("AFMImagePSDAnalysis",
 setMethod("initialize",
           "AFMImagePSDAnalysis",
           function(.Object) {
+            .Object@psd1d_breaks<-32
+            .Object@psd2d_truncHighLengthScale<-TRUE
+            .Object@psd2d_maxHighLengthScale<-0
+            .Object@psd1d<-data.table()
+            .Object@psd2d<-data.table()
             .Object@roughnessAgainstLengthscale<-data.table()
             validObject(.Object) ## valide l'objet
             return(.Object)
@@ -59,7 +70,128 @@ AFMImagePSDAnalysis <- function() {
   return(new("AFMImagePSDAnalysis"))
 }
 
-#' Method \code{roughnessAgainstLengthscale} returns a data.table of roughness vs. Lengthscale
+
+#' Method \code{psd1d_breaks} returns a number of breaks to calculate PSD1D from PSD2D
+#' @name AFMImagePSDAnalysis-class
+#' @rdname AFMImagePSDAnalysis-class
+setGeneric("psd1d_breaks",function(object){standardGeneric("psd1d_breaks")})
+setGeneric(name= "psd1d_breaks<-", 
+           def= function(AFMImagePSDAnalysis, value) {
+             return(standardGeneric("psd1d_breaks<-"))
+           })
+
+#' @rdname AFMImagePSDAnalysis-class
+#' @aliases psd1d_breaks
+#' @param object a \code{\link{AFMImagePSDAnalysis}}
+setMethod("psd1d_breaks",signature=signature(object='AFMImagePSDAnalysis'),
+          function(object) {
+            return(object@psd1d_breaks)
+          }
+)
+setReplaceMethod(f="psd1d_breaks",
+                 signature(AFMImagePSDAnalysis = "AFMImagePSDAnalysis", value = "numeric"),
+                 definition= function(AFMImagePSDAnalysis, value) {
+                   AFMImagePSDAnalysis@psd1d_breaks <- value
+                   return(AFMImagePSDAnalysis)
+                 })
+
+#' Method \code{psd2d_maxHighLengthScale} returns the maximum lengthscale to be managed by PSD2D
+#' @name AFMImagePSDAnalysis-class
+#' @rdname AFMImagePSDAnalysis-class
+setGeneric("psd2d_maxHighLengthScale",function(object){standardGeneric("psd2d_maxHighLengthScale")})
+setGeneric(name= "psd2d_maxHighLengthScale<-", 
+           def= function(AFMImagePSDAnalysis, value) {
+             return(standardGeneric("psd2d_maxHighLengthScale<-"))
+           })
+
+#' @rdname AFMImagePSDAnalysis-class
+#' @aliases psd2d_maxHighLengthScale
+setMethod("psd2d_maxHighLengthScale",signature=signature(object='AFMImagePSDAnalysis'),
+          function(object) {
+            return(object@psd2d_maxHighLengthScale)
+          }
+)
+setReplaceMethod(f="psd2d_maxHighLengthScale",
+                 signature(AFMImagePSDAnalysis = "AFMImagePSDAnalysis", value = "numeric"),
+                 definition= function(AFMImagePSDAnalysis, value) {
+                   AFMImagePSDAnalysis@psd2d_maxHighLengthScale <- value
+                   return(AFMImagePSDAnalysis)
+                 })
+
+#' Method \code{psd2d_truncHighLengthScale} returns if the lengthscale of PSD2D should be truncated
+#' @name AFMImagePSDAnalysis-class
+#' @rdname AFMImagePSDAnalysis-class
+setGeneric("psd2d_truncHighLengthScale",function(object){standardGeneric("psd2d_truncHighLengthScale")})
+setGeneric(name= "psd2d_truncHighLengthScale<-", 
+           def= function(AFMImagePSDAnalysis, value) {
+             return(standardGeneric("psd2d_truncHighLengthScale<-"))
+           })
+
+#' @rdname AFMImagePSDAnalysis-class
+#' @aliases psd2d_truncHighLengthScale
+setMethod("psd2d_truncHighLengthScale",signature=signature(object='AFMImagePSDAnalysis'),
+          function(object) {
+            return(object@psd2d_truncHighLengthScale)
+          }
+)
+setReplaceMethod(f="psd2d_truncHighLengthScale",
+                 signature(AFMImagePSDAnalysis = "AFMImagePSDAnalysis", value = "logical"),
+                 definition= function(AFMImagePSDAnalysis, value) {
+                   AFMImagePSDAnalysis@psd2d_truncHighLengthScale <- value
+                   return(AFMImagePSDAnalysis)
+                 })
+
+
+
+
+#' Method \code{psd1d} returns a data.table of psd in 1D
+#' @name AFMImagePSDAnalysis-class
+#' @rdname AFMImagePSDAnalysis-class
+setGeneric("psd1d",function(object){standardGeneric("psd1d")})
+setGeneric(name= "psd1d<-", 
+           def= function(AFMImagePSDAnalysis, value) {
+             return(standardGeneric("psd1d<-"))
+           })
+
+#' @rdname AFMImagePSDAnalysis-class
+#' @aliases psd1d
+setMethod("psd1d",signature=signature(object='AFMImagePSDAnalysis'),
+          function(object) {
+            return(object@psd1d)
+          }
+)
+setReplaceMethod(f="psd1d",
+                 signature(AFMImagePSDAnalysis = "AFMImagePSDAnalysis", value = "data.table"),
+                 definition= function(AFMImagePSDAnalysis, value) {
+                   AFMImagePSDAnalysis@psd1d <- value
+                   return(AFMImagePSDAnalysis)
+                 })
+
+
+#' Method \code{psd2d} returns a data.table of psd in 1D
+#' @name AFMImagePSDAnalysis-class
+#' @rdname AFMImagePSDAnalysis-class
+setGeneric("psd2d",function(object){standardGeneric("psd2d")})
+setGeneric(name= "psd2d<-", 
+           def= function(AFMImagePSDAnalysis, value) {
+             return(standardGeneric("psd2d<-"))
+           })
+
+#' @rdname AFMImagePSDAnalysis-class
+#' @aliases psd2d
+setMethod("psd2d",signature=signature(object='AFMImagePSDAnalysis'),
+          function(object) {
+            return(object@psd2d)
+          }
+)
+setReplaceMethod(f="psd2d",
+                 signature(AFMImagePSDAnalysis = "AFMImagePSDAnalysis", value = "data.table"),
+                 definition= function(AFMImagePSDAnalysis, value) {
+                   AFMImagePSDAnalysis@psd2d <- value
+                   return(AFMImagePSDAnalysis)
+                 })
+
+#' Method \code{roughnessAgainstLengthscale} returns a data.table of roughnesses versus lengthscale
 #' @name AFMImagePSDAnalysis-class
 #' @rdname AFMImagePSDAnalysis-class
 setGeneric("roughnessAgainstLengthscale",function(object){standardGeneric("roughnessAgainstLengthscale")})
@@ -68,9 +200,9 @@ setGeneric(name= "roughnessAgainstLengthscale<-",
              return(standardGeneric("roughnessAgainstLengthscale<-"))
            })
 
+
 #' @rdname AFMImagePSDAnalysis-class
 #' @aliases roughnessAgainstLengthscale
-#' @param object a \code{\link{AFMImagePSDAnalysis}}
 setMethod("roughnessAgainstLengthscale",signature=signature(object='AFMImagePSDAnalysis'),
           function(object) {
             return(object@roughnessAgainstLengthscale)
@@ -208,6 +340,7 @@ shiftedPSDuv<-function(AFMImage) {
 #' PSD2DAgainstFrequency returns a data table of PSD 2D values against spatial frequencies
 #'
 #' @param AFMImage an \code{AFMImage} to be analysed
+#' @param AFMImagePSDAnalysis an \code{AFMImagePSDAnalysis} to store PSD analysis results
 #' @return \code{PSD2DAgainstFrequency} returns a data table of frequencies and PSD values
 #' \itemize{
 #'   \item freq: the considered frequency
@@ -240,14 +373,14 @@ shiftedPSDuv<-function(AFMImage) {
 #' p
 #' }
 setGeneric(name= "PSD2DAgainstFrequency", 
-           def= function(AFMImage) {
+           def= function(AFMImage, AFMImagePSDAnalysis) {
              return(standardGeneric("PSD2DAgainstFrequency"))
            })
 
 #' @rdname PSD2DAgainstFrequency-methods
 #' @aliases PSD2DAgainstFrequency,AFMImage-method
 setMethod(f="PSD2DAgainstFrequency", "AFMImage",
-          definition= function(AFMImage) {
+          definition= function(AFMImage, AFMImagePSDAnalysis) {
             NyquistFq<-getNyquistSpatialFrequency(AFMImage)
             
             a=AFMImage@hscansize
@@ -271,11 +404,23 @@ setMethod(f="PSD2DAgainstFrequency", "AFMImage",
             K$Z<-sqrt(K$X^2+K$Y^2)
             
             aAggregatedPSDValuesForEachFreq=data.frame(freq=sort(unique(as.vector(K$Z))))
-            
+            totalLength <- length(aAggregatedPSDValuesForEachFreq$freq)
             frequencies<-c()
             sumedPSD<-c()
+            counter<-0
             for(freq in aAggregatedPSDValuesForEachFreq$freq) {
               if (freq > NyquistFq) break;
+              
+              if (!is.null(AFMImagePSDAnalysis@updateProgress)&&
+                  (is.function(AFMImagePSDAnalysis@updateProgress)&&
+                   (!is.null(AFMImagePSDAnalysis@updateProgress())))) {
+                counter<-counter+1
+                if (counter/100==floor(counter/100)) {
+                  value<-counter / totalLength
+                  text <- paste0("freq:", round(freq, 2)," ", round(counter, 2),"/",totalLength)
+                  AFMImagePSDAnalysis@updateProgress(value= value, detail = text)
+                } 
+              }
               
               inds <- arrayInd(which(K$Z == freq), dim(K$Z))
               allPSDSum<-0
@@ -293,7 +438,7 @@ setMethod(f="PSD2DAgainstFrequency", "AFMImage",
 #' breaks in the log space to sum PSD 2D and frequency values.
 #' 
 #' @param AFMImage an \code{AFMImage} to be analysed
-#' @param breaks the number of breaks in the log space of PSD 2D. e.g.: breaks=32 for 1000nm scansize
+#' @param AFMImagePSDAnalysis n \code{AFMImagePSDAnalysis} to store the setup and results of PSD analysis
 #' @return \code{PSD1DAgainstFrequency} returns a data table of frequencies and PSD values
 #' \itemize{
 #'   \item freq: the considered frequency
@@ -328,36 +473,59 @@ setMethod(f="PSD2DAgainstFrequency", "AFMImage",
 #' p
 #' }
 setGeneric(name= "PSD1DAgainstFrequency", 
-           def= function(AFMImage,breaks) {
+           def= function(AFMImage,AFMImagePSDAnalysis) {
              return(standardGeneric("PSD1DAgainstFrequency"))
            })
 
 #' @rdname PSD1DAgainstFrequency-methods
 #' @aliases PSD1DAgainstFrequency,AFMImage-method
 setMethod(f="PSD1DAgainstFrequency", "AFMImage",
-          definition= function(AFMImage, breaks) {
+          definition= function(AFMImage, AFMImagePSDAnalysis) {
+            AFMImagePSDAnalysis@psd2d<-PSD2DAgainstFrequency(AFMImage, AFMImagePSDAnalysis)
             
-            psdDT<-PSD2DAgainstFrequency(AFMImage)
+            breaks=AFMImagePSDAnalysis@psd1d_breaks
+            psd2dDT=AFMImagePSDAnalysis@psd2d
             
             # step 3, cut in the log space
             Q <- breaks
-            maxRhoL<- max(psdDT$freq)
+            maxRhoL<- max(psd2dDT$freq)
             maxRhoL
             
-            psdDT$logcuts<-cut(log10(psdDT$freq),breaks = Q)
+            psd2dDT$logcuts<-cut(log10(psd2dDT$freq),breaks = Q)
             
             meanFreq<-c()
             meanPSD<-c()
-            for(freq in sort(unique(as.vector(psdDT$logcuts)))) {
-              inds <- arrayInd(which(psdDT$logcuts == freq), dim(psdDT))
+            totalLength<-length(unique(as.vector(psd2dDT$logcuts)))
+            counter<-0
+            if (!is.null(AFMImagePSDAnalysis@updateProgress)&&
+                (is.function(AFMImagePSDAnalysis@updateProgress)&&
+                 (!is.null(AFMImagePSDAnalysis@updateProgress())))) {
+              text <- paste0("starting ", totalLength, " calculations")
+              AFMImagePSDAnalysis@updateProgress(value= 0, detail = text)
+            } 
+            
+            
+            for(freq in sort(unique(as.vector(psd2dDT$logcuts)))) {
+              inds <- arrayInd(which(psd2dDT$logcuts == freq), dim(psd2dDT))
               allFreqSum<-0
               allPSDSum<-0
-              allFreqSum<-mean(psdDT$freq[inds[,1]])
-              allPSDSum<-mean(psdDT$PSD[inds[,1]])
+              allFreqSum<-mean(psd2dDT$freq[inds[,1]])
+              allPSDSum<-mean(psd2dDT$PSD[inds[,1]])
               meanFreq = c(meanFreq, allFreqSum)
               meanPSD = c(meanPSD, allPSDSum)
+              
+              if (!is.null(AFMImagePSDAnalysis@updateProgress)&&
+                  (is.function(AFMImagePSDAnalysis@updateProgress)&&
+                   (!is.null(AFMImagePSDAnalysis@updateProgress())))) {
+                counter<-counter+1
+                if (counter/100==floor(counter/100)) {
+                  value<- counter / totalLength
+                  text <- paste0("freq:", round(freq, 2)," ", round(counter, 2),"/",totalLength)
+                  AFMImagePSDAnalysis@updateProgress(value= value, detail = text)
+                } 
+              }
             }
-            return(rbind(data.table(freq = meanFreq, PSD = meanPSD, type="PSD-1D", name=AFMImage@fullfilename), data.table(freq = psdDT$freq, PSD = psdDT$PSD, type="PSD-2D", name=psdDT$name)))
+            return(rbind(data.table(freq = meanFreq, PSD = meanPSD, type="PSD-1D", name=AFMImage@fullfilename), data.table(freq = psd2dDT$freq, PSD = psd2dDT$PSD, type="PSD-2D", name=psd2dDT$name)))
           })
 
 #' Calculate the roughness of the sample against length scale
@@ -366,8 +534,7 @@ setMethod(f="PSD1DAgainstFrequency", "AFMImage",
 #' \code{RoughnessByLengthScale} returns a data.table of roughnesses against length scales
 #' 
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
-#' @param truncHighLengthScale TRUE if lengthscale should be limited to the minimum between vertical and horizontal scan size
-#' @param maxHighLengthScale a lengthscale value inferior to the nyquist frequency. If this value is higher than the Nyquist frequency, it will be replaced by the later.
+#' @param AFMImagePSDAnalysis n \code{AFMImagePSDAnalysis} to store the setup and results of PSD analysis
 #' 
 #' @return a data table of lenght scale (r) and roughness values (roughness)
 #' \itemize{ 
@@ -385,7 +552,8 @@ setMethod(f="PSD1DAgainstFrequency", "AFMImage",
 #' 
 #' data("AFMImageOfNormallyDistributedHeights")
 #' oneAFMImage<-AFMImageOfNormallyDistributedHeights
-#' data<-RoughnessByLengthScale(oneAFMImage)
+#' AFMImagePSDAnalysis<-AFMImagePSDAnalysis()
+#' data<-RoughnessByLengthScale(oneAFMImage, AFMImagePSDAnalysis)
 #' r<-roughness<-filename<-NULL
 #' p1 <- ggplot(data, aes(x=r, y=roughness, colour= basename(filename)))
 #' p1 <- p1 + geom_point()
@@ -394,28 +562,31 @@ setMethod(f="PSD1DAgainstFrequency", "AFMImage",
 #' p1 <- p1 + xlab("lengthscale (nm)")
 #' p1
 setGeneric(name= "RoughnessByLengthScale", 
-           def= function(AFMImage, truncHighLengthScale, maxHighLengthScale) {
+           def= function(AFMImage, AFMImagePSDAnalysis) {
              return(standardGeneric("RoughnessByLengthScale"))
            })
 
 #' @rdname RoughnessByLengthScale-methods
 #' @aliases RoughnessByLengthScale,AFMImage-method
 setMethod(f="RoughnessByLengthScale", "AFMImage",
-          definition= function(AFMImage, truncHighLengthScale, maxHighLengthScale) {
-            
-            if(missing(truncHighLengthScale)){
-              truncHighLengthScale <- FALSE
-            }
-            
+          definition= function(AFMImage, AFMImagePSDAnalysis) {
             # calculate roughness depending on frequency
-            AggregatedPSDValuesForEachFreq<-PSD2DAgainstFrequency(AFMImage)
+            AFMImagePSDAnalysis@psd2d<-PSD2DAgainstFrequency(AFMImage, AFMImagePSDAnalysis)
+            
+            
+            truncHighLengthScale = AFMImagePSDAnalysis@psd2d_truncHighLengthScale
+            maxHighLengthScale = AFMImagePSDAnalysis@psd2d_maxHighLengthScale
+            AggregatedPSDValuesForEachFreq = AFMImagePSDAnalysis@psd2d
             
             minFrequency<-1/min(AFMImage@hscansize, AFMImage@vscansize)
             indexfmin<-tail(which(AggregatedPSDValuesForEachFreq$freq < minFrequency), n=1)
-            if(!missing(maxHighLengthScale)){
-              truncHighLengthScale <- FALSE
-              if (maxHighLengthScale<(1/minFrequency)) {
-                indexfmin<-which(AggregatedPSDValuesForEachFreq$freq > (1/maxHighLengthScale))[1]-1
+            
+            if (missing(truncHighLengthScale)||truncHighLengthScale==FALSE) {
+              if(!missing(maxHighLengthScale)){
+                truncHighLengthScale <- FALSE
+                if (maxHighLengthScale<(1/minFrequency)) {
+                  indexfmin<-which(AggregatedPSDValuesForEachFreq$freq > (1/maxHighLengthScale))[1]-1
+                }
               }
             }
             
@@ -428,11 +599,24 @@ setMethod(f="RoughnessByLengthScale", "AFMImage",
             
             r<-c()
             roughnesses=c()
+            totalLength<-indexfmax
+            counter<-0
             for (i in seq(1,indexfmax)){
               if (i>indexfmin) {
                 tryingPSDSum<-sum(AggregatedPSDValuesForEachFreq$PSD[i:indexfmax])
                 roughnesses=c(roughnesses, sqrt(tryingPSDSum))
                 r=c(r, 1/AggregatedPSDValuesForEachFreq$freq[i])
+                
+                if (!is.null(AFMImagePSDAnalysis@updateProgress)&&
+                    is.function(AFMImagePSDAnalysis@updateProgress)&&
+                    !is.null(AFMImagePSDAnalysis@updateProgress())) {
+                  counter<-counter+1
+                  if (counter/100==floor(counter/100)) {
+                    value<-counter / totalLength
+                    text <- paste0(round(counter, 2),"/",totalLength)
+                    AFMImagePSDAnalysis@updateProgress(value= value, detail = text)
+                  } 
+                }
               }
             }
             return(data.table(filename=rep(AFMImage@fullfilename, length(AggregatedPSDValuesForEachFreq$freq)-indexfmin), r= r, roughness= roughnesses))
@@ -538,6 +722,36 @@ getPaddedAFMImage<-function(AFMImage) {
            fullfilename = paste(AFMImage@fullfilename, "padded-to-",ScanSize,".txt",sep=""))
 }
 
+#' Perform all the calculation for PSD exploitation
+#' 
+#' \code{\link{performAllPSDCalculation}} perform all the calculation for PSD exploitation
+#' @param AFMImagePSDAnalysis an \code{\link{AFMImagePSDAnalysis}} to manage and store the results of PSD analysis
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @author M.Beauvais
+#' @export
+#' @examples
+#' library(AFM)
+#' 
+#' data(AFMImageOfNormallyDistributedHeights)
+#' 
+performAllPSDCalculation<-function(AFMImagePSDAnalysis, AFMImage) {
+  if (is.function(AFMImagePSDAnalysis@updateProgress)) {
+    AFMImagePSDAnalysis@updateProgress(message="1/3 - Calculating PSD2D", value=0)
+  }
+  AFMImagePSDAnalysis@psd2d<-PSD2DAgainstFrequency(AFMImage, AFMImagePSDAnalysis)
+  
+  if (is.function(AFMImagePSDAnalysis@updateProgress)) {
+    AFMImagePSDAnalysis@updateProgress(message="2/3 Calculating PSD1D", value=0)
+  }
+  AFMImagePSDAnalysis@psd1d<-PSD1DAgainstFrequency(AFMImage, AFMImagePSDAnalysis)
+  
+  if (is.function(AFMImagePSDAnalysis@updateProgress)) {
+    AFMImagePSDAnalysis@updateProgress(message="3/3 Calculating Roughness", value=0)
+  }
+  AFMImagePSDAnalysis@roughnessAgainstLengthscale<-RoughnessByLengthScale(AFMImage, AFMImagePSDAnalysis)
+  
+  return(AFMImagePSDAnalysis)
+}
 
 saveOnDiskIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser, exportDirectory){
   sampleName<-basename(AFMImageAnalyser@fullfilename)

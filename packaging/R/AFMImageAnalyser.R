@@ -27,6 +27,7 @@ if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "..density.."))
 #' 
 #' A S4 class to handle the analysis of one AFM Image. 
 #'
+#' @slot AFMImage \code{\link{AFMImage}} to be analysed
 #' @slot variogramAnalysis \code{\link{AFMImageVariogramAnalysis}}
 #' @slot psdAnalysis \code{\link{AFMImagePSDAnalysis}}
 #' @slot fdAnalysis \code{\link{AFMImageFractalDimensionsAnalysis}}
@@ -35,6 +36,7 @@ if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "..density.."))
 #' @slot TotalRrms the total Root Mean Square Roughness of the \code{\link{AFMImage}} calculated from variance
 #' @slot Ra mean roughness or mean of absolute values of heights
 #' @slot fullfilename to be removed ?
+#' @slot updateProgress a function to update a graphical user interface
 #' @name AFMImageAnalyser-class
 #' @rdname AFMImageAnalyser-class
 #' @exportClass AFMImageAnalyser 
@@ -42,18 +44,23 @@ if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "..density.."))
 #' @include AFMVariogramAnalyser.R AFMPSDAnalyser.R AFMFractalDimensionAnalyser.R AFM3DPrinter.R
 #'
 AFMImageAnalyser<-setClass("AFMImageAnalyser",
-                           slots = c(variogramAnalysis="AFMImageVariogramAnalysis", 
-                                     psdAnalysis="AFMImagePSDAnalysis",
-                                     fdAnalysis="AFMImageFractalDimensionsAnalysis",
-                                     mean="numeric", 
-                                     variance="numeric", 
-                                     TotalRrms="numeric", 
-                                     Ra="numeric", 
-                                     fullfilename="character"))
+                           slots = c(
+                             versions="data.table",
+                             AFMImage="AFMImage",
+                             variogramAnalysis="AFMImageVariogramAnalysis", 
+                             psdAnalysis="AFMImagePSDAnalysis",
+                             fdAnalysis="AFMImageFractalDimensionsAnalysis",
+                             mean="numeric", 
+                             variance="numeric", 
+                             TotalRrms="numeric", 
+                             Ra="numeric", 
+                             fullfilename="character",
+                             updateProgress="function"))
 
 #' Constructor method of AFMImageAnalyser Class.
 #'
 #' @param .Object an AFMImageAnalyser object
+#' @param AFMImage an \code{AFMImage}
 #' @param variogramAnalysis \code{\link{AFMImageVariogramAnalysis}}
 #' @param psdAnalysis \code{\link{AFMImagePSDAnalysis}}
 #' @param fdAnalysis \code{\link{AFMImageFractalDimensionsAnalysis}}
@@ -65,6 +72,7 @@ AFMImageAnalyser<-setClass("AFMImageAnalyser",
 #' @rdname AFMImageAnalyser-class-initialize
 #' @export
 setMethod("initialize", "AFMImageAnalyser", function(.Object,
+                                                     AFMImage,
                                                      variogramAnalysis, 
                                                      psdAnalysis,
                                                      fdAnalysis,
@@ -74,6 +82,7 @@ setMethod("initialize", "AFMImageAnalyser", function(.Object,
                                                      Ra, 
                                                      fullfilename)  
 {
+  if (!missing(AFMImage)) .Object@AFMImage<-AFMImage
   if (!missing(variogramAnalysis)) .Object@variogramAnalysis<-variogramAnalysis
   if (!missing(psdAnalysis)) .Object@psdAnalysis<-psdAnalysis
   if (!missing(fdAnalysis)) .Object@fdAnalysis<-fdAnalysis
@@ -82,6 +91,7 @@ setMethod("initialize", "AFMImageAnalyser", function(.Object,
   if (!missing(TotalRrms)) .Object@TotalRrms<- TotalRrms
   if (!missing(Ra)) .Object@Ra<-Ra
   .Object@fullfilename<-fullfilename
+  .Object@versions<-getLibrariesVersions()
   validObject(.Object)      
   return(.Object)
 })
@@ -92,7 +102,7 @@ setMethod("initialize", "AFMImageAnalyser", function(.Object,
 #' @rdname AFMImageAnalyser-class
 #' @export
 AFMImageAnalyser <- function(AFMImage) {
-  return(new("AFMImageAnalyser", fullfilename = AFMImage@fullfilename))
+  return(new("AFMImageAnalyser", AFMImage= AFMImage, fullfilename= AFMImage@fullfilename))
 }
 
 #' Analyse an AFMImage
@@ -105,7 +115,7 @@ AFMImageAnalyser <- function(AFMImage) {
 #'   \item basic roughness parameters analysis such as mean, variance, Rrms, Ra
 #' }
 #'
-#' @param AFMImage the \code{\link{AFMImage}} to be analysed
+#' @param AFMImageAnalyser a \code{\link{AFMImageAnalyser}} to manage and store image analysis
 #' @return an \code{\link{AFMImageAnalyser}} containing all the analysis
 #' @author M.Beauvais
 #' @export
@@ -114,19 +124,19 @@ AFMImageAnalyser <- function(AFMImage) {
 #' 
 #' data(AFMImageOfAluminiumInterface)
 #' AFMImage<-extractAFMImage(AFMImageOfAluminiumInterface, 0, 0, 32)
-#' myAFMImageAnalyser<-analyse(AFMImage)
-#' print(myAFMImageAnalyser@@fdAnalysis)
+#' AFMImageAnalyser<-new("AFMImageAnalyser", AFMImage= AFMImage, fullfilename = AFMImage@@fullfilename)
+#' AFMImageAnalyser<-analyse(AFMImageAnalyser)
+#' print(AFMImageAnalyser@@fdAnalysis)
 #' 
-analyse<-function(AFMImage) {
-  AFMImageAnalyser<-new("AFMImageAnalyser", fullfilename = AFMImage@fullfilename)
-  
+analyse<-function(AFMImageAnalyser) {
+  AFMImage<-AFMImageAnalyser@AFMImage
   # Variogram analysis  
   #TODO 
-  sampleSizePercentage<-3.43/100
-  #sampleSizePercentage<-0.13/100
-  variogramAnalysis<-AFMImageVariogramAnalysis(sampleSizePercentage)
-  variogramAnalysis@omnidirectionalVariogram<- calculateOmnidirectionalVariogram(AFMImage)
-  variogramAnalysis@directionalVariograms<- calculateDirectionalVariograms(AFMImage)
+  sampleFitPercentage<-3.43/100
+  #sampleFitPercentage<-0.13/100
+  variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage)
+  variogramAnalysis@omnidirectionalVariogram<- calculateOmnidirectionalVariogram(AFMImageVariogramAnalysis= variogramAnalysis, AFMImage=AFMImage)
+  variogramAnalysis@directionalVariograms<- calculateDirectionalVariograms(AFMImageVariogramAnalysis= variogramAnalysis, AFMImage=AFMImage)
   
   # manage model evaluations
   AFMImageVariogram<-variogramAnalysis@omnidirectionalVariogram
@@ -136,7 +146,7 @@ analyse<-function(AFMImage) {
   
   # PSD analysis
   psdAnalysis<-AFMImagePSDAnalysis()
-  roughnessAgainstLengthscale(psdAnalysis)<-RoughnessByLengthScale(AFMImage)
+  roughnessAgainstLengthscale(psdAnalysis)<-RoughnessByLengthScale(AFMImage, psdAnalysis)
   tryCatch({
     intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(psdAnalysis, AFMImage, second_slope= FALSE)
     intersections<-c(intersection)
@@ -147,7 +157,7 @@ analyse<-function(AFMImage) {
   
   # fractal dimension analysis
   fdAnalysis<-AFMImageFractalDimensionsAnalysis()
-  fractalDimensionMethods(fdAnalysis)<-getFractalDimensions(AFMImage)
+  fractalDimensionMethods(fdAnalysis)<-getFractalDimensions(AFMImage, fdAnalysis)
   
   
   # basic roughness parameters
@@ -288,6 +298,7 @@ setMethod(f="getRoughnessParameters", "AFMImage",
 #' If the variogram is very similar for all the directions then the sample is isotropic.
 #'
 #' @param AFMImage an \code{\link{AFMImage}} to be analysed
+#' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}} to perform the analysis
 #' @return an \code{\link{AFMImageAnalyser}} containing the directional variograms
 #' @author M.Beauvais
 #' @export
@@ -297,7 +308,8 @@ setMethod(f="getRoughnessParameters", "AFMImage",
 #' 
 #' data(AFMImageOfAluminiumInterface)
 #' AFMImage<-extractAFMImage(AFMImageOfAluminiumInterface, 0, 0, 32)
-#' AFMImageAnalyser<-checkIsotropy(AFMImage)
+#' AFMImageAnalyser<-new("AFMImageAnalyser", AFMImage= AFMImage, fullfilename = AFMImage@@fullfilename)
+#' AFMImageAnalyser<-checkIsotropy(AFMImage,AFMImageAnalyser)
 #' varios<-AFMImageAnalyser@@variogramAnalysis@@directionalVariograms
 #' p2 <- ggplot(varios, aes(x=dist, y=gamma,  
 #'                          color= as.factor(dir.hor), shape=as.factor(dir.hor)))
@@ -309,14 +321,14 @@ setMethod(f="getRoughnessParameters", "AFMImage",
 #' p2 <- p2 + ggtitle("Directional")
 #' p2
 #' 
-checkIsotropy<-function(AFMImage) {
+checkIsotropy<-function(AFMImage, AFMImageAnalyser) {
   print("checking isotropy...")
-  AFMImageAnalyser<-new("AFMImageAnalyser", fullfilename = AFMImage@fullfilename)
-
+  
   # Variogram analysis  
-  sampleSizePercentage<-3.43/100
-  variogramAnalysis<-AFMImageVariogramAnalysis(sampleSizePercentage)
-  variogramAnalysis@directionalVariograms<- calculateDirectionalVariograms(AFMImage)
+  sampleFitPercentage<-3.43/100
+  variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage)
+  if(!is.null(AFMImageAnalyser@updateProgress)) variogramAnalysis@updateProgress<-AFMImageAnalyser@updateProgress
+  variogramAnalysis@directionalVariograms<- calculateDirectionalVariograms(AFMImage, variogramAnalysis)
   
   AFMImageAnalyser@variogramAnalysis<-variogramAnalysis
   print("done.")
@@ -404,4 +416,23 @@ checkNormalityDensity<- function(AFMImage) {
   ggplot(AFMImage@data, aes(x=h)) +
     geom_histogram( aes(y=..density..), colour="black", fill="white") +
     stat_function(fun = dnorm, args = list(mean = mean(AFMImage@data$h), sd =  sd(AFMImage@data$h)))
+}
+
+getLibrariesVersions<-function() {
+  v<-data.table(installed.packages())
+  AFMPackage<-v[Package=="AFM",]
+  gstatPackage<-v[Package=="gstat",]
+  fractaldimPackage<-v[Package=="fractaldim",]
+  fftwtoolsPackage<-v[Package=="fftwtools",]
+  
+  versions=data.table(lib=c("AFM",
+                            "gstat",
+                            "fractaldim", 
+                            "fftwtools"),
+                      version=c(AFMPackage$Version,
+                                gstatPackage$Version,
+                                fractaldimPackage$Version,
+                                fftwtoolsPackage$Version)
+                      )
+  return(versions)
 }
