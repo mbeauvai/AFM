@@ -226,54 +226,7 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
   
   # save all images necessary for the report on disk
   putImagesFromAnalysisOnDisk(AFMImageAnalyser, AFMImage, reportDirectory)
-  
-  
-  # get variogram model evaluation
-  if (!length(AFMImageAnalyser@variogramAnalysis@variogramModels)==0) {
-    
-    mergedDT<-getDTModelEvaluation(AFMImageAnalyser@variogramAnalysis)
-    print(mergedDT)
-    
-    sillrangeDT<-getDTModelSillRange(AFMImageAnalyser@variogramAnalysis)
-    setkey(sillrangeDT, "model")
-    name<-press<-NULL
-    sampleDT <- mergedDT[name==basename(AFMImageAnalyser@AFMImage@fullfilename)]
-    setkey(sampleDT, "model")
-    #sampleDT <- sampleDT[cor>0.98]
-    sampleDT<-merge(sampleDT, sillrangeDT, by="model")
-    sampleDT<-sampleDT[,name:=NULL]
-    sampleDT <- unique(sampleDT)
-    sampleDT <- sampleDT[order(-rank(cor), rank(press))]
-    print(basename(AFMImageAnalyser@AFMImage@fullfilename))
-    print(basename(AFMImageAnalyser@fullfilename))
-    print(sampleDT)
-    
-    
-    summarySampleDT<-copy(sampleDT)
-    summarySampleDT$press<-round(sampleDT$press)
-    summarySampleDT$sill<-round(sampleDT$sill)
-    summarySampleDT$range<-round(sampleDT$range)
-    
-    print("plotting variogram table...")
-    existsVariogramModel<-TRUE
-    if (nrow(sampleDT)!=0) {
-      plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT, 
-                                                           removeRowNames=TRUE, 
-                                                           removeColNames=FALSE)
-    }else{
-      print("no good variogram table...")  
-      existsVariogramModel<-FALSE
-      sampleDT <- mergedDT[name==basename(fullfilename)]
-      sampleDT <- unique(sampleDT)
-      sampleDT <- sampleDT[order(-rank(cor), rank(press))]
-      plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT, 
-                                                           removeRowNames=TRUE, 
-                                                           removeColNames=FALSE)
-    }
-    #print(plotBestVariogramModelsTable)
-  }
-  
-  
+
   print(paste("creating", basename(reportFullfilename), "..."))
   pdf(reportFullfilename, width=8.27, height=11.69)
   
@@ -335,128 +288,172 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
   }
   
   if (!isCheckReport) {
-    # chosen sample
-    grid.newpage() # Open a new page on grid device
-    pushViewport(viewport(layout = grid.layout(7, 2)))
-    
-    sampleSpplotfullfilename<-getSpplotImagefullfilename(reportDirectory, sampleName)
-    print(paste("reading",basename(sampleSpplotfullfilename)))
-    sampleImg <- readPNG(sampleSpplotfullfilename)
-    
-    sampleSpplotfullfilename<-getVarioPngchosenFitSample(reportDirectory, sampleName)
-    print(paste("reading",basename(sampleSpplotfullfilename)))
-    chosenFitSampleImg <- readPNG(sampleSpplotfullfilename)
-    
-    
-    vp0<-  viewport(layout.pos.row = 1, layout.pos.col = 1:2)
-    grid.text("Variogram analysis",  vp=vp0, gp=gpar(fontsize=20, col="black"))
-    
-    vp1<-  viewport(layout.pos.row = 2:3, layout.pos.col = 1)
-    grid.raster(sampleImg,vp=vp1)
-    #vp3<-viewport(layout.pos.row = 9, layout.pos.col = 1)
-    #grid.text("Original",  vp=vp3, gp=gpar(fontsize=10, col="black"))
-    
-    vp2<-  viewport(layout.pos.row = 2:3, layout.pos.col = 2)
-    grid.raster(chosenFitSampleImg,vp=vp2)
-    #vp4<-viewport(layout.pos.row = 9, layout.pos.col = 2)
-    #grid.text("Sample",  vp=vp4, gp=gpar(fontsize=10, col="black"))    
-    
+    # get variogram model evaluation
+    if (!length(AFMImageAnalyser@variogramAnalysis@variogramModels)==0) {
+      
+      mergedDT<-getDTModelEvaluation(AFMImageAnalyser@variogramAnalysis)
+      print(mergedDT)
+      
+      sillrangeDT<-getDTModelSillRange(AFMImageAnalyser@variogramAnalysis)
+      setkey(sillrangeDT, "model")
+      name<-press<-NULL
+      sampleDT <- mergedDT[name==basename(AFMImageAnalyser@AFMImage@fullfilename)]
+      setkey(sampleDT, "model")
+      #sampleDT <- sampleDT[cor>0.98]
+      sampleDT<-merge(sampleDT, sillrangeDT, by="model")
+      sampleDT<-sampleDT[,name:=NULL]
+      sampleDT <- unique(sampleDT)
+      sampleDT <- sampleDT[order(-rank(cor), rank(press))]
+      print(basename(AFMImageAnalyser@AFMImage@fullfilename))
+      print(basename(AFMImageAnalyser@fullfilename))
+      print(sampleDT)
+      
+      
+      summarySampleDT<-copy(sampleDT)
+      summarySampleDT$press<-round(sampleDT$press)
+      summarySampleDT$sill<-round(sampleDT$sill)
+      summarySampleDT$range<-round(sampleDT$range)
+      
+      print("plotting variogram table...")
+      existsVariogramModel<-TRUE
+      if (nrow(sampleDT)!=0) {
+        plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT, 
+                                                             removeRowNames=TRUE, 
+                                                             removeColNames=FALSE)
+      }else{
+        print("no good variogram table...")  
+        existsVariogramModel<-FALSE
+        sampleDT <- mergedDT[name==basename(fullfilename)]
+        sampleDT <- unique(sampleDT)
+        sampleDT <- sampleDT[order(-rank(cor), rank(press))]
+        plotBestVariogramModelsTable<-getGgplotFromDataTable(summarySampleDT, 
+                                                             removeRowNames=TRUE, 
+                                                             removeColNames=FALSE)
+      }
+      #print(plotBestVariogramModelsTable)
+    }
+
     # best variogram models page
     if (!length(AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram)==0) {
+      # chosen sample
+      grid.newpage() # Open a new page on grid device
+      pushViewport(viewport(layout = grid.layout(7, 2)))
       
+      sampleSpplotfullfilename<-getSpplotImagefullfilename(reportDirectory, sampleName)
+      print(paste("reading",basename(sampleSpplotfullfilename)))
+      sampleImg <- readPNG(sampleSpplotfullfilename)
+      
+      sampleSpplotfullfilename<-getVarioPngchosenFitSample(reportDirectory, sampleName)
+      print(paste("reading",basename(sampleSpplotfullfilename)))
+      chosenFitSampleImg <- readPNG(sampleSpplotfullfilename)
+      
+      
+      vp0<-  viewport(layout.pos.row = 1, layout.pos.col = 1:2)
+      grid.text("Variogram analysis",  vp=vp0, gp=gpar(fontsize=20, col="black"))
+      
+      vp1<-  viewport(layout.pos.row = 2:3, layout.pos.col = 1)
+      grid.raster(sampleImg,vp=vp1)
+      #vp3<-viewport(layout.pos.row = 9, layout.pos.col = 1)
+      #grid.text("Original",  vp=vp3, gp=gpar(fontsize=10, col="black"))
+      
+      vp2<-  viewport(layout.pos.row = 2:3, layout.pos.col = 2)
+      grid.raster(chosenFitSampleImg,vp=vp2)
+      #vp4<-viewport(layout.pos.row = 9, layout.pos.col = 2)
+      #grid.text("Sample",  vp=vp4, gp=gpar(fontsize=10, col="black"))    
+
       vp5<-viewport(layout.pos.row = 4:7, layout.pos.col = 1:2)
       print(plotBestVariogramModelsTable,vp=vp5)
       
       printVariogramModelEvaluations(AFMImageAnalyser, sampleDT, numberOfModelsPerPage)
     }
     
-  }
-  
-  # Roughness against length scale
-  if (!length(AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale)==0) {
-    
-    grid.newpage() # Open a new page on grid device
-    pushViewport(viewport(layout = grid.layout(7, 2)))
-    
-    vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:2)
-    grid.text("Roughness vs. lengthscale",  vp=vp0, gp=gpar(fontsize=20, col="black"))
-    
-    exportCsvFullFilename<-getRoughnessAgainstLengthscale(reportDirectory, sampleName)
-    
-    print(paste("reading",basename(exportCsvFullFilename)))
-    samplePredictedImg <- readPNG(exportCsvFullFilename)
-    vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 1)
-    grid.raster(samplePredictedImg,vp=vp1)
-    
-    exportCsvFullFilename<-getRoughnessAgainstLengthscale10nm(reportDirectory, sampleName)
-    print(paste("reading",basename(exportCsvFullFilename)))
-    samplePredictedImg <- readPNG(exportCsvFullFilename)
-    vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 2)
-    grid.raster(samplePredictedImg,vp=vp1)
     
     
-    for(i in c(0,1)) {
-      exportpng2FullFilename=getRoughnessAgainstLengthscaleIntersection(reportDirectory, paste(sampleName,i*2,sep="-"))
-      if (file.exists(exportpng2FullFilename)) {
-        print("intersection inserted...")  
-        
-        img<-readPNG(exportpng2FullFilename)
-        vp2<-viewport(layout.pos.row = 5:7, layout.pos.col = i+1)
-        
-        grid.raster(img,vp=vp2)
-      }
-    }
-  }
-  
-  # export fractal dimension
-  if (!length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)==0) {
-    grid.newpage() # Open a new page on grid device
-    pushViewport(viewport(layout = grid.layout(7, 4)))
-    
-    vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:4)
-    grid.text("Fractal dimension analysis",  vp=vp0, gp=gpar(fontsize=20, col="black"))
-    
-    n=length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)
-    print(n)
-    if (n>0) {
-      sampleDT <- data.table( 
-        fd_method= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd_method)),
-        fd= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd)),
-        fd_scale= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd_scale)))
+    # Roughness against length scale
+    if (!length(AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale)==0) {
       
-      #       sampleDT <- data.table( AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)
-      #       setnames(sampleDT,c("method","scale"),c("fd_method","fd_scale"))
+      grid.newpage() # Open a new page on grid device
+      pushViewport(viewport(layout = grid.layout(7, 2)))
       
-      print(sampleDT)
-      #sampleDT <- sampleDT[,c(2,13,14,15), with = FALSE]
-      setkey(sampleDT, "fd_method")
-      sampleDT <- unique(sampleDT)
+      vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:2)
+      grid.text("Roughness vs. lengthscale",  vp=vp0, gp=gpar(fontsize=20, col="black"))
       
-      name<-NULL
-      plotFractalDimensionTable<-getGgplotFromDataTable(sampleDT[, name:=NULL])
-      vp3<-viewport(layout.pos.row = 2:3, layout.pos.col = 1:4)
-      print(plotFractalDimensionTable,vp=vp3)
+      exportCsvFullFilename<-getRoughnessAgainstLengthscale(reportDirectory, sampleName)
       
-      exportpng2FullFilename=getFractalDimensionsPngFullfilename(reportDirectory, sampleName, "isotropic")
-      if (file.exists(exportpng2FullFilename)) {
-        img<-readPNG(exportpng2FullFilename)
-        vp4<-viewport(layout.pos.row = 4:5, layout.pos.col = 1:2)
-        grid.raster(img,vp=vp4)
-      }
-      exportpng2FullFilename=getFractalDimensionsPngFullfilename(reportDirectory, sampleName, "squareincr")
-      if (file.exists(exportpng2FullFilename)) {
-        img<-readPNG(exportpng2FullFilename)
-        vp5<-viewport(layout.pos.row = 4:5, layout.pos.col = 3:4)
-        grid.raster(img,vp=vp5)
-      }
-      exportpng2FullFilename=getFractalDimensionsPngFullfilename(reportDirectory, sampleName, "filter1")
-      if (file.exists(exportpng2FullFilename)) {
-        img<-readPNG(exportpng2FullFilename)
-        vp6<-viewport(layout.pos.row = 6:7, layout.pos.col = 1:2)
-        grid.raster(img,vp=vp6)
+      print(paste("reading",basename(exportCsvFullFilename)))
+      samplePredictedImg <- readPNG(exportCsvFullFilename)
+      vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 1)
+      grid.raster(samplePredictedImg,vp=vp1)
+      
+      exportCsvFullFilename<-getRoughnessAgainstLengthscale10nm(reportDirectory, sampleName)
+      print(paste("reading",basename(exportCsvFullFilename)))
+      samplePredictedImg <- readPNG(exportCsvFullFilename)
+      vp1<-viewport(layout.pos.row = 2:4, layout.pos.col = 2)
+      grid.raster(samplePredictedImg,vp=vp1)
+      
+      
+      for(i in c(0,1)) {
+        exportpng2FullFilename=getRoughnessAgainstLengthscaleIntersection(reportDirectory, paste(sampleName,i*2,sep="-"))
+        if (file.exists(exportpng2FullFilename)) {
+          print("intersection inserted...")  
+          
+          img<-readPNG(exportpng2FullFilename)
+          vp2<-viewport(layout.pos.row = 5:7, layout.pos.col = i+1)
+          
+          grid.raster(img,vp=vp2)
+        }
       }
     }
     
+    # export fractal dimension
+    if (!length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)==0) {
+      grid.newpage() # Open a new page on grid device
+      pushViewport(viewport(layout = grid.layout(7, 4)))
+      
+      vp0<-viewport(layout.pos.row = 1, layout.pos.col = 1:4)
+      grid.text("Fractal dimension analysis",  vp=vp0, gp=gpar(fontsize=20, col="black"))
+      
+      n=length(AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)
+      print(n)
+      if (n>0) {
+        sampleDT <- data.table( 
+          fd_method= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd_method)),
+          fd= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd)),
+          fd_scale= c(sapply(1:n, function(i) AFMImageAnalyser@fdAnalysis@fractalDimensionMethods[[i]]@fd_scale)))
+        
+        #       sampleDT <- data.table( AFMImageAnalyser@fdAnalysis@fractalDimensionMethods)
+        #       setnames(sampleDT,c("method","scale"),c("fd_method","fd_scale"))
+        
+        print(sampleDT)
+        #sampleDT <- sampleDT[,c(2,13,14,15), with = FALSE]
+        setkey(sampleDT, "fd_method")
+        sampleDT <- unique(sampleDT)
+        
+        name<-NULL
+        plotFractalDimensionTable<-getGgplotFromDataTable(sampleDT[, name:=NULL])
+        vp3<-viewport(layout.pos.row = 2:3, layout.pos.col = 1:4)
+        print(plotFractalDimensionTable,vp=vp3)
+        
+        exportpng2FullFilename=getFractalDimensionsPngFullfilename(reportDirectory, sampleName, "isotropic")
+        if (file.exists(exportpng2FullFilename)) {
+          img<-readPNG(exportpng2FullFilename)
+          vp4<-viewport(layout.pos.row = 4:5, layout.pos.col = 1:2)
+          grid.raster(img,vp=vp4)
+        }
+        exportpng2FullFilename=getFractalDimensionsPngFullfilename(reportDirectory, sampleName, "squareincr")
+        if (file.exists(exportpng2FullFilename)) {
+          img<-readPNG(exportpng2FullFilename)
+          vp5<-viewport(layout.pos.row = 4:5, layout.pos.col = 3:4)
+          grid.raster(img,vp=vp5)
+        }
+        exportpng2FullFilename=getFractalDimensionsPngFullfilename(reportDirectory, sampleName, "filter1")
+        if (file.exists(exportpng2FullFilename)) {
+          img<-readPNG(exportpng2FullFilename)
+          vp6<-viewport(layout.pos.row = 6:7, layout.pos.col = 1:2)
+          grid.raster(img,vp=vp6)
+        }
+      }
+    }
   }
   dev.off()
   rm(AFMImageAnalyser)
@@ -510,9 +507,9 @@ printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfMod
     vp1<-viewport(layout.pos.row = (indexInPage-1)*2+1, layout.pos.col = 2)
     grid.raster(sampleImg,vp=vp1)
     
-#     pushViewport(vp1)
-#     print(sampleImg,newpage=FALSE)
-#     popViewport(1)
+    #     pushViewport(vp1)
+    #     print(sampleImg,newpage=FALSE)
+    #     popViewport(1)
     
     
     
@@ -537,17 +534,17 @@ printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfMod
     predictedspplotfullfilename<-getSpplotPredictedImageFullfilename(tempdir(), sampleName, modelName)
     saveSpplotFromKrige(predictedspplotfullfilename, modelName, part_valid_pr,cuts, withoutLegend = TRUE)  
     # TODO save on disk as png and read
-
+    
     # read image on disk
     #print(paste("reading", basename(predictedspplotfullfilename)))
     samplePredictedImg <- readPNG(predictedspplotfullfilename)
     #samplePredictedImg<-spplot(part_valid_pr["var1.pred"], cuts=cuts, col.regions=cols,key=list(lines=FALSE, col="transparent"))
-
+    
     vp2<-viewport(layout.pos.row = (indexInPage-1)*2+1, layout.pos.col = 3)
     grid.raster(samplePredictedImg,vp=vp2)
-#     pushViewport(vp2)
-#     print(samplePredictedImg,newpage=FALSE)
-#     popViewport(1)
+    #     pushViewport(vp2)
+    #     print(samplePredictedImg,newpage=FALSE)
+    #     popViewport(1)
     
     ang1<-ang2<-ang3<-anis1<-anis2<-name<-NULL
     fit.v<-allVariogramModelEvaluation[j][[1]]@fit.v
