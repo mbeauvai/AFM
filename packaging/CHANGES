@@ -1,0 +1,8 @@
+1.1 
+displayIn3D: the proportion were not correct
+importFromNanoscope: is now working with version 0x05
+compatible with shiny GUI
+added version of libraries in AFMImageAnalyser object
+
+1.0
+initial version
