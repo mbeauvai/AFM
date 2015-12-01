@@ -861,7 +861,7 @@ getSpplotFromAFMImage<-function(AFMImage, expectedWidth, expectHeight, withoutLe
     p<-spplot(initialAFMImage["h"], cuts=cuts, col.regions=cols)
   }
   
-  initialAFMImage.lowres <- aggregate(initialAFMImage["h"], fact = 2, fun = mean)
+  #initialAFMImage.lowres <- aggregate(initialAFMImage["h"], fact = 2, fun = mean)
   
   
   
