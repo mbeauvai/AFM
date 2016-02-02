@@ -31,6 +31,7 @@ if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "..density.."))
 #' @slot variogramAnalysis \code{\link{AFMImageVariogramAnalysis}}
 #' @slot psdAnalysis \code{\link{AFMImagePSDAnalysis}}
 #' @slot fdAnalysis \code{\link{AFMImageFractalDimensionsAnalysis}}
+#' @slot networksAnalysis \code{\link{AFMImageNetworksAnalysis}}
 #' @slot mean  the mean of heights of the \code{\link{AFMImage}}
 #' @slot variance the variance of heights of the \code{\link{AFMImage}}
 #' @slot TotalRrms the total Root Mean Square Roughness of the \code{\link{AFMImage}} calculated from variance
@@ -41,7 +42,7 @@ if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "..density.."))
 #' @rdname AFMImageAnalyser-class
 #' @exportClass AFMImageAnalyser 
 #' @author M.Beauvais
-#' @include AFMVariogramAnalyser.R AFMPSDAnalyser.R AFMFractalDimensionAnalyser.R AFM3DPrinter.R
+#' @include AFMVariogramAnalyser.R AFMPSDAnalyser.R AFMFractalDimensionAnalyser.R AFM3DPrinter.R AFMNetworksAnalyser.R AFM3DPrinter.R
 #'
 AFMImageAnalyser<-setClass("AFMImageAnalyser",
                            slots = c(
@@ -50,6 +51,8 @@ AFMImageAnalyser<-setClass("AFMImageAnalyser",
                              variogramAnalysis="AFMImageVariogramAnalysis", 
                              psdAnalysis="AFMImagePSDAnalysis",
                              fdAnalysis="AFMImageFractalDimensionsAnalysis",
+                             networksAnalysis="AFMImageNetworksAnalysis",
+                             threeDimensionAnalysis="AFMImage3DModelAnalysis",
                              mean="numeric", 
                              variance="numeric", 
                              TotalRrms="numeric", 
@@ -64,6 +67,8 @@ AFMImageAnalyser<-setClass("AFMImageAnalyser",
 #' @param variogramAnalysis \code{\link{AFMImageVariogramAnalysis}}
 #' @param psdAnalysis \code{\link{AFMImagePSDAnalysis}}
 #' @param fdAnalysis \code{\link{AFMImageFractalDimensionsAnalysis}}
+#' @param networksAnalysis \code{\link{AFMImageNetworksAnalysis}}
+#' @param threeDimensionAnalysis \code{\link{AFMImage3DModelAnalysis}}
 #' @param mean  the mean of heights of the \code{\link{AFMImage}}
 #' @param variance the variance of heights of the \code{\link{AFMImage}}
 #' @param TotalRrms the total Root Mean Square Roughness of the \code{\link{AFMImage}} calculated from variance
@@ -76,6 +81,8 @@ setMethod("initialize", "AFMImageAnalyser", function(.Object,
                                                      variogramAnalysis, 
                                                      psdAnalysis,
                                                      fdAnalysis,
+                                                     networksAnalysis,
+                                                     threeDimensionAnalysis,
                                                      mean, 
                                                      variance, 
                                                      TotalRrms, 
@@ -86,6 +93,8 @@ setMethod("initialize", "AFMImageAnalyser", function(.Object,
   if (!missing(variogramAnalysis)) .Object@variogramAnalysis<-variogramAnalysis
   if (!missing(psdAnalysis)) .Object@psdAnalysis<-psdAnalysis
   if (!missing(fdAnalysis)) .Object@fdAnalysis<-fdAnalysis
+  if (!missing(networksAnalysis)) .Object@networksAnalysis<-networksAnalysis
+  if (!missing(threeDimensionAnalysis)) .Object@threeDimensionAnalysis<-threeDimensionAnalysis
   if (!missing(mean)) .Object@mean<-mean
   if (!missing(variance)) .Object@variance<-variance
   if (!missing(TotalRrms)) .Object@TotalRrms<- TotalRrms
@@ -158,7 +167,6 @@ analyse<-function(AFMImageAnalyser) {
   # fractal dimension analysis
   fdAnalysis<-AFMImageFractalDimensionsAnalysis()
   fractalDimensionMethods(fdAnalysis)<-getFractalDimensions(AFMImage, fdAnalysis)
-  
   
   # basic roughness parameters
   AFMImageAnalyser@mean=mean(AFMImage@data$h)
