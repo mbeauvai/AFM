@@ -67,6 +67,13 @@
 #' @import png
 #' @import plyr
 #' @import methods
+#' @import igraph
+#' @import methods
+#' @import shiny
+#' @import shinyjs
+#' @import markdown
+#' @import rglwidget
+#' @import misc3d
 #' @importFrom grDevices blues9 dev.off heat.colors pdf png
 #' @importFrom stats coefficients cor dist dnorm lm na.omit sd var
 #' @importFrom utils head installed.packages read.table tail write.table
