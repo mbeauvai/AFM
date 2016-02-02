@@ -10,6 +10,30 @@ require(sp)
 require(rgl)
 require(reshape2)
 
+setOldClass("mesh3d")
+
+#' @title AFM image Power Spectrum Density analysis class
+#' 
+#' @description \code{AFMImage3DModelAnalysis} 
+#'
+#' @slot f1 a face of the 3D model
+#' @slot f2 a face of the 3D model
+#' @slot f3 a face of the 3D model
+#' @slot f4 a face of the 3D model
+#' @name AFMImage3DModelAnalysis-class
+#' @rdname AFMImage3DModelAnalysis-class
+#' @author M.Beauvais
+AFMImage3DModelAnalysis<-setClass("AFMImage3DModelAnalysis",
+                                  slots = c(
+                                    f1="mesh3d",
+                                    f2="mesh3d",
+                                    f3="mesh3d",
+                                    f4="mesh3d",
+                                    updateProgress="function"),
+                                  validity = function(object) { 
+                                    return(TRUE)
+                                  })
+
 #' Display a 3D image of an AFMImage and store it on disk.
 #'
 #' Display a 3D image of an AFMImage and store it on disk if fullfilename variable is set.
@@ -50,7 +74,7 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
   
   # respect the proportion between horizontal / vertical distance and heigth
   newHeights <- (AFMImage@data$h)*(AFMImage@samplesperline)/(AFMImage@scansize)
-
+  
   minH<-min(newHeights)
   # TODO check validity of created image instead
   if(!is.na(minH)) {
@@ -90,6 +114,211 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
   return(FALSE)
 }
 
+
+
+#' Calculate the 3D model for 3D printing
+#'
+#' \code{calculate3DModel} update  \code{\link{AFMImage3DModelAnalysis}}
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param AFMImage3DModelAnalysis n \code{\link{AFMImage3DModelAnalysis}} to store the setup and results of PSD analysis
+#' 
+#' @name calculate3DModel
+#' @rdname calculate3DModel-methods
+#' @exportMethod calculate3DModel
+#' @author M.Beauvais
+setGeneric(name= "calculate3DModel", 
+           def= function(AFMImage3DModelAnalysis, AFMImage) {
+             return(standardGeneric("calculate3DModel"))
+           })
+
+#' @rdname calculate3DModel-methods
+#' @aliases calculate3DModel,AFMImage-method
+setMethod(f="calculate3DModel", "AFMImage3DModelAnalysis",
+          definition= function(AFMImage3DModelAnalysis, AFMImage) {
+
+            print(paste("exporting to stl format "))
+            baseThickness<-2
+            
+            # respect the proportion between horizontal / vertical distance and heigth
+            newHeights <- (AFMImage@data$h)*(AFMImage@samplesperline)/(AFMImage@scansize)
+            
+            minH<-min(newHeights)
+            #print(paste("minH", minH))
+            if (minH<0) { newH<-(newHeights-minH+baseThickness) 
+            }  else { newH<-(newHeights-minH+5) }
+            #print(paste("min(newH)", min(newH)))
+            #print(paste("max(newH)", max(newH)))
+            
+            totalLength<-4
+            counter<-0
+            
+            
+            if (!is.null(AFMImage3DModelAnalysis@updateProgress)&&
+                is.function(AFMImage3DModelAnalysis@updateProgress)&&
+                !is.null(AFMImage3DModelAnalysis@updateProgress())) {
+              text <- paste0("starting ", totalLength, " calculations")
+              #AFMImage3DModelAnalysis@updateProgress(message="Calculating 3D faces", value=0)
+              
+              AFMImage3DModelAnalysis@updateProgress(value= 0, detail = text)
+              
+              counter<-counter+1
+              value<-counter / totalLength
+              text <- paste0(round(counter, 2),"/",totalLength)
+              AFMImage3DModelAnalysis@updateProgress(value= value, detail = text)
+              print("update")
+            }else{
+              print("no GUI update")
+              print(is.null(AFMImage3DModelAnalysis@updateProgress))
+              print(is.function(AFMImage3DModelAnalysis@updateProgress))
+              print(is.null(AFMImage3DModelAnalysis@updateProgress()))
+            }
+            
+            
+            #face 1
+            x1<-seq(1:AFMImage@lines)
+            y1<-rep(rep(1, each = AFMImage@lines) , each=1)
+            z1<-newH[x1+(y1-1)*AFMImage @samplesperline]
+            
+            x1=c(x1,x1[length(x1)])
+            y1=c(y1,1)
+            z1=c(z1,1)
+            
+            x1=c(x1,1)
+            y1=c(y1,1)
+            z1=c(z1,1)
+            
+            x1=c(x1,x1[1])
+            y1=c(y1,y1[1])
+            z1=c(z1,z1[1])
+            
+            #    print(length(x1))
+            #    print(length(y1))
+            #    print(length(z1))
+            #    print(x1)
+            #    print(y1)
+            #    print(z1)
+            
+            f1<-polygon3d(x1, z1, y1, col = "red", plot=FALSE, fill=TRUE)
+            f1<-rotate3d( f1 , -pi/2, 1, 0, 0 )
+            f1<-translate3d( f1 , 0, AFMImage@samplesperline+1, 0 )
+            
+            #face 2
+            if (!is.null(AFMImage3DModelAnalysis@updateProgress)&&
+                is.function(AFMImage3DModelAnalysis@updateProgress)&&
+                !is.null(AFMImage3DModelAnalysis@updateProgress())) {
+              counter<-counter+1
+              value<-counter / totalLength
+              text <- paste0(round(counter, 2),"/",totalLength)
+              AFMImage3DModelAnalysis@updateProgress(value= value, detail = text)
+            }
+            
+            y1<-rep(AFMImage@lines, each = AFMImage@lines)
+            x1<-seq(1:AFMImage@lines)
+            z1<-newH[x1+(y1-1)*AFMImage@samplesperline]
+            
+            x1=c(x1,x1[length(x1)])
+            y1=c(y1,y1[1])
+            z1=c(z1,1)
+            
+            x1=c(x1,1)
+            y1=c(y1,y1[1])
+            z1=c(z1,1)
+            
+            x1=c(x1,x1[1])
+            y1=c(y1,y1[1])
+            z1=c(z1,z1[1])
+            
+            #   print(length(x1))
+            #   print(length(y1))
+            #   print(length(z1))
+            #   print(x1)
+            #   print(y1)
+            #   print(z1)
+            y1<-as.numeric(y1)
+            
+            # z1<-z1+rnorm(1:length(z1))
+            
+            f2<-polygon3d(x1, z1, y1, col = "blue", plot=FALSE, fill=TRUE)
+            f2<-rotate3d( f2 , -pi/2, 1, 0, 0 )
+            f2<-translate3d( f2 , 0, AFMImage@lines+1, 0 )
+            
+            
+            #face 3
+            if (!is.null(AFMImage3DModelAnalysis@updateProgress)&&
+                is.function(AFMImage3DModelAnalysis@updateProgress)&&
+                !is.null(AFMImage3DModelAnalysis@updateProgress())) {
+              counter<-counter+1
+              value<-counter / totalLength
+              text <- paste0(round(counter, 2),"/",totalLength)
+              AFMImage3DModelAnalysis@updateProgress(value= value, detail = text)
+            }
+            
+            y1<-seq(1:AFMImage@samplesperline)
+            x1<-rep(1, times = (AFMImage@samplesperline))
+            z1<-rev(newH[x1+(y1-1)*AFMImage@samplesperline])
+            
+            x1=c(x1,x1[length(x1)])
+            y1=c(y1,y1[length(y1)])
+            z1=c(z1,1)
+            
+            x1=c(x1,x1[1])
+            y1=c(y1,y1[1])
+            z1=c(z1,1)
+            
+            x1=c(x1,x1[1])
+            y1=c(y1,y1[1])
+            z1=c(z1,z1[1])
+            
+            #   print(x1)
+            #   print(y1)
+            #   print(z1)
+            
+            f3<-polygon3d(y1, z1, x1, col = "red", plot=FALSE, fill=TRUE)
+            f3<-rotate3d( f3 , -pi/2, 1, 0, 0 )
+            f3<-rotate3d( f3 , -pi/2, 0, 0, 1 )
+            f3<-translate3d( f3 , 0, 0, 0 )
+            
+            #face 4
+            if (!is.null(AFMImage3DModelAnalysis@updateProgress)&&
+                is.function(AFMImage3DModelAnalysis@updateProgress)&&
+                !is.null(AFMImage3DModelAnalysis@updateProgress())) {
+              counter<-counter+1
+              value<-counter / totalLength
+              text <- paste0(round(counter, 2),"/",totalLength)
+              AFMImage3DModelAnalysis@updateProgress(value= value, detail = text)
+            }
+            
+            y1<-seq(1:AFMImage@samplesperline)
+            x1<-rep(AFMImage@lines, times = AFMImage@samplesperline)
+            z1<-rev(newH[x1+(y1-1)*AFMImage@samplesperline])
+            
+            
+            x1=c(x1,x1[length(x1)])
+            y1=c(y1,y1[length(y1)])
+            z1=c(z1,1)
+            
+            x1=c(x1,x1[1])
+            y1=c(y1,y1[1])
+            z1=c(z1,1)
+            
+            x1=c(x1,x1[1])
+            y1=c(y1,y1[1])
+            z1=c(z1,z1[1])
+            
+            f4<-polygon3d(y1, z1, x1, col = "red", plot=FALSE, fill=TRUE)
+            f4<-rotate3d( f4 , -pi/2, 1, 0, 0 )
+            f4<-rotate3d( f4 , -pi/2, 0, 0, 1 )
+            
+            AFMImage3DModelAnalysis@f1<-f1
+            AFMImage3DModelAnalysis@f2<-f2
+            AFMImage3DModelAnalysis@f3<-f3
+            AFMImage3DModelAnalysis@f4<-f4
+            return(AFMImage3DModelAnalysis)
+          })
+
+
+
 #' Export an AFM Image as a STL format file.
 #' 
 #' Export an \code{\link{AFMImage}} as a STL format file thanks to the \code{\link{rgl}} package. The STL file can be used as an input for a 3D printing software tool.\cr\cr
@@ -100,6 +329,7 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
 #' \item Use "Add" button below the menu to display your AFM Image on the print board
 #' \item Right click on your AFM image. Use "Scale> uniformely" option, Set "15%"  for your AFM image to fit your printing board
 #' }
+#' @param AFMImage3DModelAnalysis an \code{\link{AFMImage3DModelAnalysis}}
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
 #' @param stlfullfilename  directory and filename to save as a stl file
 #' @author M.Beauvais
@@ -112,9 +342,14 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
 #' newAFMImage<-extractAFMImage(AFMImageOfAluminiumInterface, cornerX=50, cornerY=50, size=64)
 #' exportToSTL(newAFMImage, paste(tempdir(), "myFile.stl", sep="/"))
 #' }
-exportToSTL<- function(AFMImage, stlfullfilename) {
+exportToSTL<- function(AFMImage3DModelAnalysis, AFMImage, stlfullfilename) {
+  
   print(paste("exporting to stl format ", basename(stlfullfilename) ))
   baseThickness<-2
+  
+  
+  
+  #AFMImage3DModelAnalysis<-calculate3DModel(AFMImage3DModelAnalysis= AFMImage3DModelAnalysis, AFMImage= AFMImage)
   
   # respect the proportion between horizontal / vertical distance and heigth
   newHeights <- (AFMImage@data$h)*(AFMImage@samplesperline)/(AFMImage@scansize)
@@ -126,113 +361,7 @@ exportToSTL<- function(AFMImage, stlfullfilename) {
   #print(paste("min(newH)", min(newH)))
   #print(paste("max(newH)", max(newH)))
   
-  #face 1
-  x1<-seq(1:AFMImage@lines)
-  y1<-rep(rep(1, each = AFMImage@lines) , each=1)
-  z1<-newH[x1+(y1-1)*AFMImage @samplesperline]
   
-  x1=c(x1,x1[length(x1)])
-  y1=c(y1,1)
-  z1=c(z1,1)
-  
-  x1=c(x1,1)
-  y1=c(y1,1)
-  z1=c(z1,1)
-  
-  x1=c(x1,x1[1])
-  y1=c(y1,y1[1])
-  z1=c(z1,z1[1])
-  
-  #    print(length(x1))
-  #    print(length(y1))
-  #    print(length(z1))
-  #    print(x1)
-  #    print(y1)
-  #    print(z1)
-  
-  f1<-polygon3d(x1, z1, y1, col = "red", plot=FALSE, fill=TRUE)
-  f1<-rotate3d( f1 , -pi/2, 1, 0, 0 )
-  f1<-translate3d( f1 , 0, AFMImage@samplesperline+1, 0 )
-  
-  #face 2
-  y1<-rep(AFMImage@lines, each = AFMImage@lines)
-  x1<-seq(1:AFMImage@lines)
-  z1<-newH[x1+(y1-1)*AFMImage@samplesperline]
-  
-  x1=c(x1,x1[length(x1)])
-  y1=c(y1,y1[1])
-  z1=c(z1,1)
-  
-  x1=c(x1,1)
-  y1=c(y1,y1[1])
-  z1=c(z1,1)
-  
-  x1=c(x1,x1[1])
-  y1=c(y1,y1[1])
-  z1=c(z1,z1[1])
-  
-  #   print(length(x1))
-  #   print(length(y1))
-  #   print(length(z1))
-  #   print(x1)
-  #   print(y1)
-  #   print(z1)
-  y1<-as.numeric(y1)
-  
-  # z1<-z1+rnorm(1:length(z1))
-  
-  f2<-polygon3d(x1, z1, y1, col = "blue", plot=FALSE, fill=TRUE)
-  f2<-rotate3d( f2 , -pi/2, 1, 0, 0 )
-  f2<-translate3d( f2 , 0, AFMImage@lines+1, 0 )
-  
-  
-  #face 3
-  y1<-seq(1:AFMImage@samplesperline)
-  x1<-rep(1, times = (AFMImage@samplesperline))
-  z1<-rev(newH[x1+(y1-1)*AFMImage@samplesperline])
-  
-  x1=c(x1,x1[length(x1)])
-  y1=c(y1,y1[length(y1)])
-  z1=c(z1,1)
-  
-  x1=c(x1,x1[1])
-  y1=c(y1,y1[1])
-  z1=c(z1,1)
-  
-  x1=c(x1,x1[1])
-  y1=c(y1,y1[1])
-  z1=c(z1,z1[1])
-  
-  #   print(x1)
-  #   print(y1)
-  #   print(z1)
-  
-  f3<-polygon3d(y1, z1, x1, col = "red", plot=FALSE, fill=TRUE)
-  f3<-rotate3d( f3 , -pi/2, 1, 0, 0 )
-  f3<-rotate3d( f3 , -pi/2, 0, 0, 1 )
-  f3<-translate3d( f3 , 0, 0, 0 )
-  
-  #face 4
-  y1<-seq(1:AFMImage@samplesperline)
-  x1<-rep(AFMImage@lines, times = AFMImage@samplesperline)
-  z1<-rev(newH[x1+(y1-1)*AFMImage@samplesperline])
-  
-  
-  x1=c(x1,x1[length(x1)])
-  y1=c(y1,y1[length(y1)])
-  z1=c(z1,1)
-  
-  x1=c(x1,x1[1])
-  y1=c(y1,y1[1])
-  z1=c(z1,1)
-  
-  x1=c(x1,x1[1])
-  y1=c(y1,y1[1])
-  z1=c(z1,z1[1])
-  
-  f4<-polygon3d(y1, z1, x1, col = "red", plot=FALSE, fill=TRUE)
-  f4<-rotate3d( f4 , -pi/2, 1, 0, 0 )
-  f4<-rotate3d( f4 , -pi/2, 0, 0, 1 )
   
   # surface
   z<-matrix(newH,nrow = AFMImage@lines,ncol = AFMImage@samplesperline)
@@ -246,10 +375,10 @@ exportToSTL<- function(AFMImage, stlfullfilename) {
   
   rgl.open()
   par3d(windowRect = c(100,100,800,800))
-  shade3d(f1)
-  shade3d(f2)
-  shade3d(f3)
-  shade3d(f4)
+  shade3d(AFMImage3DModelAnalysis@f1)
+  shade3d(AFMImage3DModelAnalysis@f2)
+  shade3d(AFMImage3DModelAnalysis@f3)
+  shade3d(AFMImage3DModelAnalysis@f4)
   terrain3d(x, y, z, color=col, front="lines", back="lines")
   
   # create a stl file
