@@ -392,3 +392,72 @@ extractAFMImage<-function(AFMImage, cornerX, cornerY, size) {
   #   newAFMImage@fullfilename<-paste(AFMImage@fullfilename, "extract.txt", sep="-")
   return(newAFMImage)
 }
+
+
+#' simplify an AFM image.
+#' 
+#' The simplification is taking a very simple gridded sample of the image. 
+#' It can be useful to speed up display.
+#' 
+#' \code{simplifyAFMImage} returns a simplified AFMImage
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param newSamplesperline the new samplesperline of the AFMImage
+#' @param newLines the new lines of the AFMImage
+#' @return a new simplified \code{\link{AFMImage}}
+#' @author M.Beauvais
+#' @export
+#' @rdname AFMImage-simplifyAFMImage
+#' @examples
+#' data(AFMImageOfAluminiumInterface)
+#' anAFMImageExtract<-extractAFMImage(AFMImageOfAluminiumInterface,128,128)
+#' 
+simplifyAFMImage<-function(AFMImage, newSamplesperline, newLines) {
+  print(paste("simplifyAFMImage", newSamplesperline, newLines))
+
+  #   AFMImage<-AFMImageOfRegularPeaks
+  #   newSamplesperline<-16
+  #   newLines<-16
+  # print(paste(newSamplesperline, newLines))
+  
+  if (newSamplesperline> AFMImage@samplesperline) newSamplesperline<-AFMImage@samplesperline
+  if (newLines> AFMImage@lines) newLines<-AFMImage@lines
+  
+  
+  z<-matrix(AFMImage@data$h,nrow = AFMImage@lines,ncol = AFMImage@samplesperline)
+  samplesperlineBy=ceil(AFMImage@samplesperline/newSamplesperline)
+  samplesperlineIndices=seq(1,AFMImage@samplesperline, by=samplesperlineBy)
+  
+  linesBy=ceil(AFMImage@lines/newLines)
+  linesIndices=seq(1,AFMImage@lines, by=linesBy)
+  newZ=z[samplesperlineIndices,linesIndices]
+  
+  
+#   print(paste(samplesperlineBy))
+#   print(paste(samplesperlineIndices))
+#   print(paste(linesBy))
+#   print(paste(linesIndices))
+#   print(newZ)
+  
+  
+  scanby<-AFMImage@scansize/newSamplesperline
+  endScan<-AFMImage@scansize*(1-1/newSamplesperline)
+  
+  newData = data.table(x = rep(seq(0,endScan, by= scanby), times = newLines),
+                       y = rep(seq(0,endScan, by= scanby), each = newSamplesperline),
+                       h =as.numeric(newZ))
+  
+#   print(newData$x)
+#   print(newData$y)
+  
+  newAFMImage=new("AFMImage",
+                  data=newData,
+                  vscansize=AFMImage@vscansize,
+                  hscansize=AFMImage@hscansize,
+                  scansize=AFMImage@scansize,
+                  samplesperline=newSamplesperline,
+                  lines=newLines,
+                  fullfilename=AFMImage@fullfilename)
+  
+  return(newAFMImage)
+  
+}
