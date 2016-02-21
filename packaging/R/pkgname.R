@@ -20,6 +20,8 @@
 #'   \item print in 3D (3D print) (\code{\link{exportToSTL}}) your AFM image
 #' }
 #' 
+#' An EC2 instance is available for basic testing at the following address: \url{http://www.afmist.org}
+#' 
 #' Note: To use with a Brucker(TM) Atomic Force Microscope, use nanoscope analysis(TM) software and
 #' \itemize{
 #'   \item Use the "Flatten" function.
@@ -52,16 +54,8 @@
 #' @docType package
 #' @name AFM
 #' @import data.table
-#' @import stringr
 #' @import gstat
-#' @import fractaldim
 #' @import rgl
-#' @import pracma
-#' @import fftwtools
-#' @import geoR
-#' @import grid
-#' @import gridExtra
-#' @import moments
 #' @import ggplot2
 #' @import sp
 #' @import png
@@ -69,12 +63,17 @@
 #' @import methods
 #' @import igraph
 #' @import methods
-#' @import shiny
-#' @import shinyjs
-#' @import markdown
-#' @import rglwidget
-#' @import misc3d
+#' @importFrom fftwtools fftw2d
+#' @importFrom fractaldim fd.estim.filter1 fd.estim.isotropic fd.estim.squareincr fd.estim.transect.incr1 fd.estim.transect.var
+#' @importFrom grid grid.layout grid.newpage grid.text pushViewport viewport gpar grid.raster
+#' @importFrom gridExtra tableGrob ttheme_default
 #' @importFrom grDevices blues9 dev.off heat.colors pdf png
+#' @importFrom moments skewness
+#' @importFrom pracma ceil meshgrid
+#' @importFrom rglwidget renderRglwidget rglwidget sceneChange registerSceneChange rglwidgetOutput
+#' @importFrom shiny actionButton downloadButton downloadHandler fileInput h3 hr htmlOutput HTML imageOutput isolate mainPanel navbarMenu navbarPage observeEvent plotOutput radioButtons reactive reactiveValues renderImage renderPlot renderTable renderUI shinyServer shinyUI sidebarLayout sidebarPanel sliderInput tableOutput tabPanel updateSliderInput uiOutput
+#' @importFrom shinyjs disable enable useShinyjs
 #' @importFrom stats coefficients cor dist dnorm lm na.omit sd var
+#' @importFrom stringr str_sub str_replace_all
 #' @importFrom utils head installed.packages read.table tail write.table
 NULL

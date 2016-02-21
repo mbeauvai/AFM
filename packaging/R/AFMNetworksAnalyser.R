@@ -5,9 +5,9 @@ HASHSIZE<-512*512
 
 setOldClass("igraph")
 
-#' AFM image network analysis class
+#' AFM image networks analysis class
 #' 
-#' A S4 class to handle the network calculation 
+#' A S4 class to handle the networks calculation 
 #'
 #' @slot originalGraph a list of \code{\link{igraph}}
 #' @slot skeletonGraph a list of \code{\link{igraph}}
@@ -123,7 +123,13 @@ setMethod(f="calculateNetworks", "AFMImageNetworksAnalysis",
           })
 
 
-
+#' Get vertex id from x,y coordinates
+#'
+#' \code{getVertexId} return the vertexId
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param x coordinates in x axis
+#' @param y coordinates in y axis
 #' @author M.Beauvais
 #' @export
 getVertexId<-function(AFMImage,x,y) {
@@ -135,6 +141,12 @@ getVertexId<-function(AFMImage,x,y) {
   
 }
 
+#' Get x,y coordinates from vertex id
+#'
+#' \code{getCoordinatesFromVertexId} return a list x,y coordinates
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param vId the vertex id
 #' @author M.Beauvais
 #' @export
 getCoordinatesFromVertexId<-function(AFMImage, vId) {
@@ -144,6 +156,12 @@ getCoordinatesFromVertexId<-function(AFMImage, vId) {
   return(c(x,y))
 }
 
+#' Get getNetworkGridLayout
+#'
+#' \code{getNetworkGridLayout} return a list x,y coordinates
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param vId the vertex id
 #' @author M.Beauvais
 #' @export
 getNetworkGridLayout<-function(AFMImage, vId) {
@@ -153,6 +171,12 @@ getNetworkGridLayout<-function(AFMImage, vId) {
   return(data.table(x=x,y=y))
 }
 
+#' Does an edge exist ?
+#'
+#' \code{existsEdge} return TRUE if an edge exists for this vertex id
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param vertexId the vertex id
 #' @author M.Beauvais
 #' @export
 existsEdge<-function(AFMImage, vertexId) {
@@ -176,6 +200,13 @@ existsEdge<-function(AFMImage, vertexId) {
   return(FALSE)
 }
 
+#' Get surrounding vertices from x,y coordinates
+#'
+#' \code{getSurroundingVertexesList} return the vertexId
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param x coordinates in x axis
+#' @param y coordinates in y axis
 #' @author M.Beauvais
 #' @export
 getSurroundingVertexesList<-function(AFMImage,x,y) {
@@ -222,6 +253,13 @@ getSurroundingVertexesList<-function(AFMImage,x,y) {
   return(vList)
 }
 
+#' isAdjacentToBetterVertex
+#'
+#' \code{isAdjacentToBetterVertex} return TRUE if vertex is adjacent to a better vertex
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param x coordinates in x axis
+#' @param y coordinates in y axis
 #' @author M.Beauvais
 #' @export
 isAdjacentToBetterVertex<-function(AFMImage,x,y) {
@@ -268,6 +306,12 @@ isAdjacentToBetterVertex<-function(AFMImage,x,y) {
   return(FALSE)
 }
 
+#' gridIgraphPlot
+#'
+#' \code{gridIgraphPlot} return TRUE if vertex is adjacent to a better vertex
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param g the networks
 #' @author M.Beauvais
 #' @export
 gridIgraphPlot<-function(AFMImage, g){
@@ -290,6 +334,12 @@ gridIgraphPlot<-function(AFMImage, g){
   
 }
 
+#' Calculate iGraph from AFMImage
+#'
+#' \code{calculateIgraph} return 
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param AFMImageNetworksAnalysis an \code{\link{AFMImageNetworksAnalysis}} from Atomic Force Microscopy
 #' @author M.Beauvais
 #' @export
 calculateIgraph<-function(AFMImage, AFMImageNetworksAnalysis) {
@@ -341,6 +391,11 @@ calculateIgraph<-function(AFMImage, AFMImageNetworksAnalysis) {
   return(g)
 }
 
+#' getListOfDiameters
+#'
+#' \code{getListOfDiameters} return 
+#' 
+#' @param g list of igraph networks
 #' @author M.Beauvais
 #' @export
 getListOfDiameters<-function(g) {
@@ -352,11 +407,21 @@ getListOfDiameters<-function(g) {
   return(LIST_OF_DIAMETERS)  
 }
 
-
+#' canBeRemoved
+#'
+#' \code{canBeRemoved} return 
+#' 
+#' @param vertexId a vertex id
+#' @param g a igraph
+#' @param allVertices list of all vertices
+#' @param DEGREE_LIMIT_FOR_CANDIDATE_VERTICE degree
+#' 
+#' @author M.Beauvais
+#' @export
 canBeRemoved<-function(vertexId, g, allVertices, DEGREE_LIMIT_FOR_CANDIDATE_VERTICE) {
   avList<-adjacent_vertices(g, v=c(vertexId), mode = c("all"))
   avListNew<-unique(avList[[vertexId]]$name)
-  
+  found<-NULL
   if (nrow(allVertices[, c("found"):=vertexId %in% avListNew & degree<(DEGREE_LIMIT_FOR_CANDIDATE_VERTICE+1)][found==TRUE])>0) {
     return(FALSE)
   }else{
@@ -365,6 +430,12 @@ canBeRemoved<-function(vertexId, g, allVertices, DEGREE_LIMIT_FOR_CANDIDATE_VERT
   
 }
 
+#' calculateNetworkSkeleton
+#'
+#' \code{calculateNetworkSkeleton} return 
+#' 
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param AFMImageNetworksAnalysis an \code{\link{AFMImageNetworksAnalysis}} from Atomic Force Microscopy
 #' @author M.Beauvais
 #' @export
 calculateNetworkSkeleton<-function(AFMImage, AFMImageNetworksAnalysis) {

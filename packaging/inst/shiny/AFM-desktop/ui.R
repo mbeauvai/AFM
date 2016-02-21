@@ -1,6 +1,5 @@
 library(shiny)
 library(shinyjs)
-library(markdown)
 library(rglwidget)
 
 shinyUI(

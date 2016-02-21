@@ -4,7 +4,6 @@ require("pracma")
 require("data.table")
 
 require("gstat")
-require("geoR")
 require(sp)
 
 

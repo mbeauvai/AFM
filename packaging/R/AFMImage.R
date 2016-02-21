@@ -2,7 +2,6 @@ require("data.table")
 require("fftwtools")
 require("pracma")
 require("gstat")
-require("geoR")
 require("sp")
 require("stringr")
 #require(reshape2)
@@ -401,15 +400,15 @@ extractAFMImage<-function(AFMImage, cornerX, cornerY, size) {
 #' 
 #' \code{simplifyAFMImage} returns a simplified AFMImage
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
-#' @param newSamplesperline the new samplesperline of the AFMImage
-#' @param newLines the new lines of the AFMImage
+#' @param newSamplesperline the new number of samplesperline of the AFMImage
+#' @param newLines the new number of lines of the AFMImage
 #' @return a new simplified \code{\link{AFMImage}}
 #' @author M.Beauvais
 #' @export
 #' @rdname AFMImage-simplifyAFMImage
 #' @examples
 #' data(AFMImageOfAluminiumInterface)
-#' anAFMImageExtract<-extractAFMImage(AFMImageOfAluminiumInterface,128,128)
+#' anAFMImageExtract<-simplifyAFMImage(AFMImageOfAluminiumInterface,16,16)
 #' 
 simplifyAFMImage<-function(AFMImage, newSamplesperline, newLines) {
   print(paste("simplifyAFMImage", newSamplesperline, newLines))
