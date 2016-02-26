@@ -1,7 +1,7 @@
 Package: AFM
 Type: Package
-Version: 1.1.1
-Date: 2015-12-04
+Version: 1.2.1
+Date: 2016-02-23
 Title: Atomic Force Microscope Image Analysis
 Authors@R: c(person("Mathieu", "Beauvais", role = c("aut", "cre"), email = "beauvais.escp@gmail.com"),person("Irma", "Liascukiene", role = "aut"),person("Jessem", "Landoulsi", role = "aut"))
 Author: Mathieu Beauvais [aut, cre],
@@ -19,7 +19,10 @@ Depends:
     R (>= 3.1.3)
 Imports:
     data.table(>= 1.9.6),stringr(>= 1.0.0),gstat(>= 1.0-26),fractaldim(>= 0.8-4),rgl(>= 0.95.1367),pracma(>= 1.8.6),fftwtools(>= 0.9-7),grid(>= 3.1.3),gridExtra(>= 2.0.0),moments(>= 0.14),ggplot2(>= 1.0.1),sp(>= 1.2-0),png(>= 0.1-7),plyr(>= 1.8.3),
-    igraph(>= 1.0.1),methods(>= 3.1.3), shiny(>= 0.12.2), shinyjs(>= 0.4.0), rglwidget(>= 0.1.1434)
+    igraph(>= 1.0.1),methods(>= 3.1.3),
+    shiny(>= 0.12.2),
+    shinyjs(>= 0.4.0),
+    rglwidget(>= 0.1.1434)
 Collate:
     'AFM3DPrinter.R'
     'AFMFractalDimensionAnalyser.R'
