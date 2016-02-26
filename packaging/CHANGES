@@ -1,3 +1,7 @@
+1.2
+added shiny GUI
+modify 3D calculation to work with Amazon EC2
+
 1.1 
 displayIn3D: the proportion were not correct
 importFromNanoscope: is now working with version 0x05
