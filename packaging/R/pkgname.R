@@ -3,9 +3,12 @@
 #' The AFM package provides statistics analysis tools for Atomic Force Microscopy image analysis.\cr
 #' Licence: Affero GPL v3
 #' 
+#' A graphical user interface is available by using \code{\link{runAFMApp}} command.
+#' 
 #' Several high level functions are :
 #' \itemize{
-#'   \item import your image from Nanoscope Analysis (TM) tool (\code{\link{importFromNanoscope}}) or from a list of measured  heights (examples of \code{\link{AFMImage}})
+#'   \item create your AFM image from a list of measured  heights (see example section of \code{\link{AFMImage}})
+#'   \item import your image from Nanoscope Analysis (TM) tool (\code{\link{importFromNanoscope}}) 
 #'   \item check if your sample is normally distributed and isotropic and get a pdf report (\code{\link{generateCheckReport}})
 #'   \item perform variance (variogram), roughness against lengthscale, fractal analysis and get a pdf report (\code{\link{generateReport}})
 #' }
@@ -57,12 +60,12 @@
 #' @import gstat
 #' @import rgl
 #' @import ggplot2
-#' @import sp
 #' @import png
 #' @import plyr
 #' @import methods
 #' @import igraph
 #' @import methods
+#' @importFrom sp coordinates CRS is.projected proj4string spplot
 #' @importFrom fftwtools fftw2d
 #' @importFrom fractaldim fd.estim.filter1 fd.estim.isotropic fd.estim.squareincr fd.estim.transect.incr1 fd.estim.transect.var
 #' @importFrom grid grid.layout grid.newpage grid.text pushViewport viewport gpar grid.raster

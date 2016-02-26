@@ -358,32 +358,39 @@ calculateIgraph<-function(AFMImage, AFMImageNetworksAnalysis) {
   }
   
   if (graphicalUpdate) {
-    AFMImageNetworksAnalysis@updateProgress(message="1/2 - Generating edge list", value=0)
+    AFMImageNetworksAnalysis@updateProgress(message="1/2 - Generating edges list", value=0)
   }
   print(paste("Generating edge list"))
-  edgeList=data.table()
-  counter<-0
+  
+  counter<-1
+  #edgeList=data.table()  
+  edgeList <- vector("list", AFMImage@samplesperline*AFMImage@lines+1)
+  
   for (x in seq(1: AFMImage@samplesperline)) {
     for (y in seq(1: (AFMImage@lines-1))) {
       currentVertexId<-getVertexId(AFMImage,x,y)
       if (existsEdge(AFMImage, currentVertexId)) {
-        edgeList<-rbind(edgeList, getSurroundingVertexesList(AFMImage,x,y))
+        #edgeList<-rbind(edgeList, getSurroundingVertexesList(AFMImage,x,y))
+        edgeList[[counter]] <- getSurroundingVertexesList(AFMImage,x,y)
         counter<-counter+1
       }
       if (graphicalUpdate) {
         graphicalCounter<-graphicalCounter+1
+        if (graphicalCounter/100==floor(graphicalCounter/100)) {
         value<-graphicalCounter / totalLength
         text <- paste0(round(graphicalCounter, 2),"/",totalLength)
         AFMImageNetworksAnalysis@updateProgress(value= 0, detail = text)
       }
     }
   }
-  
-  if (graphicalUpdate) {
-    AFMImageNetworksAnalysis@updateProgress(message="2/2 - Generating graph", value=0)
   }
   
-  el=as.matrix(edgeList)
+  if (graphicalUpdate) {
+    AFMImageNetworksAnalysis@updateProgress(message="2/2 - Generating network", value=0)
+  }
+  
+  newEdgeList<-rbindlist(edgeList)
+  el=as.matrix(newEdgeList)
   print(paste("Creating graph"))
   g<-graph_from_edgelist(el[,1:2], directed=FALSE)
   print(paste("Created",counter,"vertices"))
@@ -515,6 +522,8 @@ calculateNetworkSkeleton<-function(AFMImage, AFMImageNetworksAnalysis) {
         onevertexId=listOfCandidateVertices$vertexId[vi]
         if (canBeRemoved(onevertexId, g=g, allVertices=allVertices, DEGREE_LIMIT_FOR_CANDIDATE_VERTICE=DEGREE_LIMIT_FOR_CANDIDATE_VERTICE)) {
           vId<-listOfCandidateVertices$vertexId[vi]
+          
+          # store the list of adjacent vertices of the node before deleting it
           avList<-unique(adjacent_vertices(g, v=c(vId), mode = c("all"))[[vId]]$name)
           
           
@@ -537,10 +546,25 @@ calculateNetworkSkeleton<-function(AFMImage, AFMImageNetworksAnalysis) {
             }
             g<-g+edges(listOfEdges)
           }else{
-            break
+            print("61")
+            NEW_LIST_OF_DIAMETERS=getListOfDiameters(g)
+            if ((!identical(LIST_OF_DIAMETERS,NEW_LIST_OF_DIAMETERS))) {
+              print (paste("should not have removed", vId))
+              verticesThatCantBeRemovedList=c(verticesThatCantBeRemovedList, listOfCandidateVertices$vertexId[vi])
+              
+              g<-g+vertices(as.numeric(vId))
+              
+              listOfEdges=c()
+              for(j in seq(1,length(avList))) {
+                listOfEdges=c(listOfEdges, vId, avList[j], avList[j],vId)
           }
           
+              g<-g+edges(listOfEdges)
+            }
+            break
         }
+      }
+        
       }
       if (graphicalUpdate) {
         graphicalCounter<-graphicalCounter+1
@@ -560,3 +584,78 @@ calculateNetworkSkeleton<-function(AFMImage, AFMImageNetworksAnalysis) {
   return(AFMImageNetworksAnalysis)
 }
 
+#' Calculate topology image (TBC)
+#'
+#' \code{getTopologyAFMImage} return the global topological distance
+#' 
+#' @param BinaryAFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy in a binary format 0 or 1 values for heigths
+#' @param AFMImageNetworksAnalysis an \code{\link{AFMImageNetworksAnalysis}} from Atomic Force Microscopy
+#' @author M.Beauvais
+#' @export
+getTopologyAFMImage<-function(BinaryAFMImage, AFMImageNetworksAnalysis){
+
+  filterVector<-unlist(BinaryAFMImage@data$h)
+  
+  topology<-c()
+  
+  
+  for (x in 1:BinaryAFMImage@samplesperline) {
+    for (y in 1:BinaryAFMImage@lines) {
+      if(x==1) {
+        bX=seq(from=0, to=BinaryAFMImage@samplesperline-1, by=1)
+      }else{
+        if (x==BinaryAFMImage@samplesperline) {
+          bX=seq(from=x-1, to=0, by=-1)
+        }else{
+          bX=seq(from=x-1, to=0, by=-1)
+          bX=c(bX, seq(from=1, to=BinaryAFMImage@samplesperline-x, by=1))
+        }
+      }
+      # bX
+      
+      if(y==1) {
+        bY=seq(from=0, to=BinaryAFMImage@lines-1, by=1)
+      }else{
+        if (y==BinaryAFMImage@lines) {
+          bY=seq(from=y-1, to=0, by=-1)
+        }else{
+          bY=seq(from=y-1, to=0, by=-1)
+          bY=c(bY, seq(from=1, to=BinaryAFMImage@lines-y, by=1))
+        }
+      }
+      # bY
+      
+      
+      bX=BinaryAFMImage@hscansize*bX
+      bY=BinaryAFMImage@vscansize*bY
+      
+      bX<-matrix(rep(bX,BinaryAFMImage@lines), ncol=BinaryAFMImage@lines, byrow=TRUE )
+      bY<-matrix(rep(bY,BinaryAFMImage@samplesperline), ncol=BinaryAFMImage@samplesperline, byrow=FALSE )
+      
+      nm=as.numeric(1/sqrt(bX^2+bY^2))
+      nm[is.infinite(nm)]<-0
+      #nm*filterVector
+      res<-sum(nm*filterVector)
+      topology<-c(topology,res)
+      #print(res)
+      
+    }
+  }
+  
+  
+  scanby<-BinaryAFMImage@scansize/BinaryAFMImage@samplesperline
+  endScan<-BinaryAFMImage@scansize*(1-1/BinaryAFMImage@samplesperline)
+  
+  topologyAFMImage<-AFMImage(
+    data = data.table(x = rep(seq(0,endScan, by= scanby), times = BinaryAFMImage@lines),
+                      y = rep(seq(0,endScan, by= scanby), each = BinaryAFMImage@samplesperline),
+                      h = topology),
+    samplesperline = BinaryAFMImage@samplesperline, lines = BinaryAFMImage@lines,
+    vscansize = BinaryAFMImage@vscansize, hscansize = BinaryAFMImage@hscansize, scansize = BinaryAFMImage@scansize,
+    fullfilename = BinaryAFMImage@fullfilename )
+  
+  
+  
+  return(topologyAFMImage)
+  
+}
