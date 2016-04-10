@@ -1,3 +1,8 @@
+1.2.1
+new sp import for OSX version
+modification for ggplot2 v2
+some examples written for PSD calculations
+
 1.2
 added shiny GUI
 modify 3D calculation to work with Amazon EC2
