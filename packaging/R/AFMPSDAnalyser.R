@@ -454,24 +454,20 @@ setMethod(f="PSD2DAgainstFrequency", "AFMImage",
 #' library(ggplot2)
 #' library(plyr)
 #' library(scales)
- 
 
 #' data("AFMImageOfNormallyDistributedHeights")
-
 #'  newAFMImage<-AFMImageOfNormallyDistributedHeights
-#' newAFMImage@fullfilename<-"C:/Users/mbeauvai/Documents/AccPlatform/person_display_R/packaging/outputs_tests/AFMImageOfNormallyDistributedHeights.txt"
-
-
+#' newAFMImage@fullfilename<-"C:/Users/one/AFMImageOfNormallyDistributedHeights.txt"
 #' psdAnalysis<-AFMImagePSDAnalysis()
 #' # Create a closure to update progress
 #' psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
-#' if (exists("progressPSD")){
-#'  if (!is.null(message)) {
-#'    progressPSD$set(message = message, value = 0)
-#'  }else{
-#'    progressPSD$set(value = value, detail = detail)
-#'  }
-#' }
+#'   if (exists("progressPSD")){
+#'    if (!is.null(message)) {
+#'      progressPSD$set(message = message, value = 0)
+#'    }else{
+#'      progressPSD$set(value = value, detail = detail)
+#'    }
+#'   }
 #' }
 #' psdAnalysis@psd1d_breaks<-2^3
 #' psdAnalysis@psd2d_truncHighLengthScale<-TRUE
@@ -750,7 +746,7 @@ getPaddedAFMImage<-function(AFMImage) {
 #' data(AFMImageOfNormallyDistributedHeights)
 #' 
 #' newAFMImage<-AFMImageOfNormallyDistributedHeights
-#' newAFMImage@fullfilename<-"C:/Users/mbeauvai/Documents/AccPlatform/person_display_R/packaging/outputs_tests/AFMImageOfNormallyDistributedHeights.txt"
+#' newAFMImage@fullfilename<-"C:/Users/one/AFMImageOfNormallyDistributedHeights.txt"
 #' psdAnalysis<-AFMImagePSDAnalysis()
 #' # Create a closure to update progress
 #' psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
