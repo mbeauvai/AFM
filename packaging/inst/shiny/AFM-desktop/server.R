@@ -49,6 +49,9 @@ testHEADLESS<-function() {
 testHEADLESS()
 #HEADLESS<-TRUE
 print(paste("HEADLESS is", HEADLESS))
+print(paste("interactive() is", interactive()))
+
+
 #Do not open rgl windows with headless shiny server
 if (HEADLESS) {
   options(rgl.useNULL = TRUE)
@@ -132,7 +135,7 @@ shinyServer(function(input, output, session) {
     shinyjs::enable("calculateFractalDimensionsButton")
     shinyjs::enable("calculateNetworksNetworksButton")
     
-    if (!HEADLESS) shinyjs::enable("displayIn3D3DButton")
+    shinyjs::enable("displayIn3D3DButton")
     if (!HEADLESS) shinyjs::enable("snapshot3DButton")
     shinyjs::enable("calculate3DModel3DButton")
     #shinyjs::enable("export3DModel3DButton")
@@ -294,10 +297,12 @@ shinyServer(function(input, output, session) {
         psdAnalysis<-AFMImagePSDAnalysis()
         # Create a closure to update progress
         psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
-          if (!is.null(message)) {
-            progressPSD$set(message = message, value = 0)
-          }else{
-            progressPSD$set(value = value, detail = detail)
+          if (exists("progressPSD")){
+            if (!is.null(message)) {
+              progressPSD$set(message = message, value = 0)
+            }else{
+              progressPSD$set(value = value, detail = detail)
+            }
           }
         }
         psdAnalysis@psd1d_breaks<-2^input$breaksSliderPSD
@@ -790,9 +795,10 @@ shinyServer(function(input, output, session) {
       }else{ if (is.null(v$AFMImageAnalyser@psdAnalysis)) {
         print("is.null(v$AFMImageAnalyser@psdAnalysis)")
       }else{
-        p <- ggplot(data=v$AFMImageAnalyser@psdAnalysis@psd1d)
-        p <- p + geom_point(aes(freq, PSD, color=type),subset = .(type %in% c("PSD-2D")))
-        p <- p + geom_line(aes(freq, PSD, color=type),subset = .(type %in% c("PSD-1D")),size=1.1)
+        datap<-v$AFMImageAnalyser@psdAnalysis@psd1d
+        p <- ggplot(data=datap)
+        p <- p + geom_point(aes(datap$freq, datap$PSD, color=datap$type),data=datap[datap$type %in% c("PSD-2D")])
+        p <- p + geom_line(aes(datap$freq, datap$PSD, color=datap$type),data=datap[datap$type %in% c("PSD-1D")],size=1.1)
         p <- p + scale_x_log10()
         p <- p + scale_y_log10()
         p <- p + ylab("PSD (nm^4)")
@@ -1484,7 +1490,7 @@ shinyServer(function(input, output, session) {
       
       newAFMImage@data$h<-heights
       
-
+      
       
       
       getSpplotFromAFMImage(newAFMImage, expectedWidth=512, expectHeight= 512, withoutLegend=TRUE)
@@ -1495,7 +1501,7 @@ shinyServer(function(input, output, session) {
     if (is.null(v$AFMImageAnalyser)||
         is.null(v$AFMImageAnalyser@networksAnalysis)||
         is.null(v$AFMImageAnalyser@networksAnalysis@skeletonGraph)
-        ) {
+    ) {
       return()
     }
     library(igraph)
