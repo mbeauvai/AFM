@@ -797,8 +797,8 @@ shinyServer(function(input, output, session) {
       }else{
         datap<-v$AFMImageAnalyser@psdAnalysis@psd1d
         p <- ggplot(data=datap)
-        p <- p + geom_point(aes(datap$freq, datap$PSD, color=datap$type),data=datap[datap$type %in% c("PSD-2D")])
-        p <- p + geom_line(aes(datap$freq, datap$PSD, color=datap$type),data=datap[datap$type %in% c("PSD-1D")],size=1.1)
+        p <- p + geom_point(aes(freq, PSD, color=type),data=datap[datap$type %in% c("PSD-2D")])
+        p <- p + geom_line(aes(freq, PSD, color=type),data=datap[datap$type %in% c("PSD-1D")],size=1.1)
         p <- p + scale_x_log10()
         p <- p + scale_y_log10()
         p <- p + ylab("PSD (nm^4)")
