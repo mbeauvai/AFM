@@ -65,7 +65,7 @@
 #' @import methods
 #' @import igraph
 #' @import methods
-#' @importFrom sp coordinates coordinates<- CRS is.projected proj4string spplot
+#' @importFrom sp coordinates coordinates<- CRS is.projected proj4string proj4string<- spplot
 #' @importFrom fftwtools fftw2d
 #' @importFrom fractaldim fd.estim.filter1 fd.estim.isotropic fd.estim.squareincr fd.estim.transect.incr1 fd.estim.transect.var
 #' @importFrom grid grid.layout grid.newpage grid.text pushViewport viewport gpar grid.raster
