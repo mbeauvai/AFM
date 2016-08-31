@@ -52,8 +52,6 @@ testHEADLESS<-function() {
 print(paste("HEADLESS is", HEADLESS))
 print(paste("interactive() is", interactive()))
 
-
-
 #Do not open rgl windows with headless shiny server
 if (HEADLESS) {
   options(rgl.useNULL = TRUE)
