@@ -1,4 +1,5 @@
 1.2.2
 added NEWS file
 Bug correction
-added support of network analysis - draft version
+Added slope analysis in Variograms and Power Spectral Density
+Added support of network analysis - draft version
