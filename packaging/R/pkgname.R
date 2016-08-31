@@ -57,26 +57,27 @@
 #' @docType package
 #' @name AFM
 #' @import data.table
-#' @import gstat
-#' @import rgl
 #' @import ggplot2
-#' @import png
-#' @import plyr
-#' @import methods
+#' @import gstat
 #' @import igraph
 #' @import methods
-#' @importFrom sp coordinates CRS is.projected proj4string spplot
+#' @import png
+#' @import plyr
+#' @import scales
+#' @importFrom sp SpatialPoints coordinates coordinates<- CRS is.projected proj4string proj4string<- spplot surfaceArea
 #' @importFrom fftwtools fftw2d
 #' @importFrom fractaldim fd.estim.filter1 fd.estim.isotropic fd.estim.squareincr fd.estim.transect.incr1 fd.estim.transect.var
+#' @importFrom graphics plot
 #' @importFrom grid grid.layout grid.newpage grid.text pushViewport viewport gpar grid.raster
 #' @importFrom gridExtra tableGrob ttheme_default
 #' @importFrom grDevices blues9 dev.off heat.colors pdf png
 #' @importFrom moments skewness
 #' @importFrom pracma ceil meshgrid
-#' @importFrom rglwidget renderRglwidget rglwidget sceneChange registerSceneChange rglwidgetOutput
+#' @importFrom rgl renderRglwidget rglwidget sceneChange registerSceneChange rglwidgetOutput rgl.close rgl.cur rgl.set rgl.clear rgl.bg rgl.bbox rgl.surface rgl.viewpoint rgl.snapshot rgl.open par3d polygon3d rotate3d translate3d shade3d terrain3d writeSTL
 #' @importFrom shiny actionButton downloadButton downloadHandler fileInput h3 hr htmlOutput HTML imageOutput isolate mainPanel navbarMenu navbarPage observeEvent plotOutput radioButtons reactive reactiveValues renderImage renderPlot renderTable renderUI shinyServer shinyUI sidebarLayout sidebarPanel sliderInput tableOutput tabPanel updateSliderInput uiOutput
 #' @importFrom shinyjs disable enable useShinyjs
 #' @importFrom stats coefficients cor dist dnorm lm na.omit sd var
 #' @importFrom stringr str_sub str_replace_all
 #' @importFrom utils head installed.packages read.table tail write.table
+#' @importFrom dbscan dbscan
 NULL
