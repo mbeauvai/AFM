@@ -18,6 +18,58 @@ require(stats)
 
 if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("r", "roughness","x","predict.gstat"))
 
+
+#' @title AFM Image psd slope analysis
+#' 
+#' @description \code{AFMImagePSDSlopesAnalysis} stores the analysis of the second slope in roughness against lenghtscale
+#' 
+#' @slot lc to be removed ?
+#' @slot wsat to be removed ?
+#' @slot slope to be removed ?
+#' @slot yintersept to be removed ?
+#' @name AFMImagePSDSlopesAnalysis-class
+#' @rdname AFMImagePSDSlopesAnalysis-class
+#' @exportClass AFMImagePSDSlopesAnalysis
+#' @author M.Beauvais
+AFMImagePSDSlopesAnalysis<-setClass("AFMImagePSDSlopesAnalysis",
+                                 slots = c(lc="numeric", 
+                                           wsat="numeric", 
+                                           slope="numeric",
+                                           yintersept="numeric",
+                                           tangente_point1="numeric",
+                                           tangente_point2="numeric"),
+                                 validity = function(object) { 
+                                   return(TRUE)
+                                 }
+)
+
+#' Constructor method of AFMImagePSDSlopesAnalysis Class.
+#' 
+#' @param .Object an AFMImagePSDSlopesAnalysis object
+#' @rdname AFMImagePSDSlopesAnalysis-class
+#' @export
+setMethod("initialize",
+          "AFMImagePSDSlopesAnalysis",
+          function(.Object) {
+            .Object@lc<-0
+            .Object@wsat<-0
+            .Object@slope<-0
+            .Object@yintersept<-0
+            .Object@tangente_point1<-0
+            .Object@tangente_point2<-0
+            validObject(.Object) ## valide l'objet
+            return(.Object)
+          })
+
+#' Wrapper function AFMImagePSDSlopesAnalysis
+#'
+#' @rdname AFMImagePSDSlopesAnalysis-class
+#' @export
+AFMImagePSDSlopesAnalysis <- function() {
+  return(new("AFMImagePSDSlopesAnalysis"))
+}
+
+
 #' @title AFM image Power Spectrum Density analysis class
 #' 
 #' @description \code{AFMImagePSDAnalysis} handles an \code{\link{AFMImage}} roughness against lenghscale analysis 
@@ -37,6 +89,8 @@ AFMImagePSDAnalysis<-setClass("AFMImagePSDAnalysis",
                                 psd2d="data.table",
                                 roughnessAgainstLengthscale="data.table",
                                 intersections="numeric",
+                                AFMImagePSDSlopesAnalysis1="AFMImagePSDSlopesAnalysis",
+                                AFMImagePSDSlopesAnalysis2="AFMImagePSDSlopesAnalysis",
                                 updateProgress="function"),
                               validity = function(object) { 
                                 return(TRUE)
@@ -454,21 +508,32 @@ setMethod(f="PSD2DAgainstFrequency", "AFMImage",
 #' library(ggplot2)
 #' library(plyr)
 #' library(scales)
-#' 
-#' # Calculate the Power Spectral Density in one dimension
+
 #' data("AFMImageOfNormallyDistributedHeights")
-#' oneAFMImage<-AFMImageOfNormallyDistributedHeights
-#' # using 32 breaks in the log space to calculate PSD 1D from PSD 2D
-#' psd1d<-PSD1DAgainstFrequency(oneAFMImage, 32)
-#' p <- ggplot(data=psd1d)
-#' p <- p + geom_point(aes(freq, PSD, color=type),subset = .(type %in% c("PSD-2D")))
-#' p <- p + geom_line(aes(freq, PSD, color=type),subset = .(type %in% c("PSD-1D")),size=1.1)
+#'  newAFMImage<-AFMImageOfNormallyDistributedHeights
+#' newAFMImage@fullfilename<-"C:/Users/one/AFMImageOfNormallyDistributedHeights.txt"
+#' psdAnalysis<-AFMImagePSDAnalysis()
+#' # Create a closure to update progress
+#' psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
+#'   if (exists("progressPSD")){
+#'    if (!is.null(message)) {
+#'      progressPSD$set(message = message, value = 0)
+#'    }else{
+#'      progressPSD$set(value = value, detail = detail)
+#'    }
+#'   }
+#' }
+#' psdAnalysis@psd1d_breaks<-2^3
+#' psdAnalysis@psd2d_truncHighLengthScale<-TRUE
+#' psdAnalysis<-performAllPSDCalculation(AFMImagePSDAnalysis= psdAnalysis, AFMImage= newAFMImage)
+#' datap<-psdAnalysis@psd1d
+#' p <- ggplot(data=datap)
+#' p <- p + geom_point(aes(freq, PSD, color=type),data=datap[datap$type %in% c("PSD-2D")])
+#' p <- p + geom_line(aes(freq, PSD, color=type),data=datap[datap$type %in% c("PSD-1D")],size=1.1)
 #' p <- p + scale_x_log10()
-#' p <- p + scale_y_log10(  breaks = trans_breaks("log10", function(x) 10^x), 
-#'                         labels = trans_format("log10", math_format(10^.x)))
+#' p <- p + scale_y_log10()
 #' p <- p + ylab("PSD (nm^4)")
 #' p <- p + xlab("Frequency (nm^-1)")
-#' p <- p + ggtitle(basename(oneAFMImage@@fullfilename))
 #' p
 #' }
 setGeneric(name= "PSD1DAgainstFrequency", 
@@ -729,10 +794,29 @@ getPaddedAFMImage<-function(AFMImage) {
 #' @author M.Beauvais
 #' @export
 #' @examples
+#' \dontrun{
 #' library(AFM)
 #' 
 #' data(AFMImageOfNormallyDistributedHeights)
 #' 
+#' newAFMImage<-AFMImageOfNormallyDistributedHeights
+#' newAFMImage@fullfilename<-"C:/Users/one/AFMImageOfNormallyDistributedHeights.txt"
+#' psdAnalysis<-AFMImagePSDAnalysis()
+#' # Create a closure to update progress
+#' psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
+#'   if (exists("progressPSD")){
+#'     if (!is.null(message)) {
+#'       progressPSD$set(message = message, value = 0)
+#'     }else{
+#'       progressPSD$set(value = value, detail = detail)
+#'     }
+#'   }
+#' }
+#' psdAnalysis@psd1d_breaks<-2^3
+#' psdAnalysis@psd2d_truncHighLengthScale<-TRUE
+#' psdAnalysis<-performAllPSDCalculation(AFMImagePSDAnalysis= psdAnalysis, AFMImage= newAFMImage)
+#' print("done psdAnalysis")
+#' }
 performAllPSDCalculation<-function(AFMImagePSDAnalysis, AFMImage) {
   if (is.function(AFMImagePSDAnalysis@updateProgress)) {
     AFMImagePSDAnalysis@updateProgress(message="1/3 - Calculating PSD2D", value=0)
@@ -752,21 +836,28 @@ performAllPSDCalculation<-function(AFMImagePSDAnalysis, AFMImage) {
   return(AFMImagePSDAnalysis)
 }
 
+#' save an image of the roughness against lenghtscale calculations
+#' 
+#' \code{\link{saveOnDiskIntersectionForRoughnessAgainstLengthscale}} save an image of the roughness against lenghtscale calculations
+#' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}} to get Roughness against lenghtscale calculation
+#' @param exportDirectory a directory on the file system
+#' @author M.Beauvais
+#' @export
 saveOnDiskIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser, exportDirectory){
   sampleName<-basename(AFMImageAnalyser@fullfilename)
   
-  data<-AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale
+  data<-getSimplifiedRoughnessAgainstLenghscale(AFMImageAnalyser)
   data$r<-as.numeric(data$r)
   
   aval<-max(data$r)
   index<-which(data$r<= aval)[1]
-  
+  print(index)
   lengthData<-length(data$r)-index
   ndataw<-tail(data,n= lengthData)
   ndataw$sample<-basename(ndataw$filename)
   
   #find x1 x2 that minimizes Xinter
-  min=1
+  min=nrow(data)
   max=2
   
   point<- data[data$r %in% min(data$r)]
@@ -783,20 +874,17 @@ saveOnDiskIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser,
   aorigin<-0
   borigin <- point1$roughness - aorigin * point2$r
   
-  
-  
   x1x2=AFMImageAnalyser@psdAnalysis@intersections[c(2,3,5,6)]
-  
+  print(x1x2)
   
   for(i in c(0,2)) {
     x1<-x1x2[i+1]
     x2<-x1x2[i+2]
-    #x1<-244
-    #x2<-44
+    print(x1)
     point1<-data[x1]
     point2<-data[x2]
-    x=data[seq(x1,x2)]$r
-    y=data[seq(x1,x2)]$roughness
+    x=data[seq(x2,x1)]$r
+    y=data[seq(x2,x1)]$roughness
     res <- lm(y~x)
     coefficients(res)
     b<-unname(res$coefficients[1])
@@ -805,7 +893,7 @@ saveOnDiskIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser,
     tangeantePoints = data.table(x=c(point1$r, point2$r), y=c(point1$roughness, point2$roughness))
     
     xinter <- (b-borigin)/(aorigin-a)
-    title<-paste("Xinter= ", xinter," -plateau= ", borigin)
+    title<-paste(" -Lc= ", xinter," -plateau= ", borigin)
     
     roughness<-r<-NULL
     p1 <- ggplot(ndataw, aes(x=r, y=roughness, colour= basename(sample)))
@@ -819,7 +907,6 @@ saveOnDiskIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser,
     p1 <- p1 + xlab("lengthscale (nm)")
     p1 <- p1 + guides(colour=FALSE)
     p1 <- p1 + ggtitle(title)
-    
     exportpng2FullFilename=getRoughnessAgainstLengthscaleIntersection(exportDirectory, paste( sampleName, i, sep="-"))
     print(paste("saving", basename(exportpng2FullFilename)))
     png(filename=exportpng2FullFilename, units = "px", width=800, height=800)
@@ -828,23 +915,30 @@ saveOnDiskIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser,
   }
 }
 
-
-getAutoIntersectionForRoughnessAgainstLengthscale<-function(psdAnalysis, AFMImage, second_slope=FALSE){
-  sampleName<-basename(AFMImage@fullfilename)
-  exportDirectory<-paste(dirname(AFMImage@fullfilename), "outputs", sep="/")
+#' get the intersection between tangente and plateau
+#' 
+#' \code{\link{getAutoIntersectionForRoughnessAgainstLengthscale}} get the intersection between tangente and plateau
+#' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}} to get Roughness against lenghtscale calculation
+#' @param second_slope a boolean to manage first or second slope in the roughness against lenghtscale curve
+#' @return a \code{\link{AFMImagePSDSlopesAnalysis}}
+#' @author M.Beauvais
+#' @export
+getAutoIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser, second_slope=FALSE){
+  # sampleName<-basename(AFMImageAnalyser@AFMImage@fullfilename)
+  # exportDirectory<-paste(dirname(AFMImageAnalyser@AFMImage@fullfilename), "outputs", sep="/")
   
-  data<-psdAnalysis@roughnessAgainstLengthscale
+  data<-getSimplifiedRoughnessAgainstLenghscale(AFMImageAnalyser)
   data$r<-as.numeric(data$r)
   
   aval<-max(data$r)
   index<-which(data$r<= aval)[1]
   
   lengthData<-length(data$r)-index
-  #print(paste("lengthData=",lengthData))
+  print(paste("lengthData=",lengthData))
   #lengthData
-  ndataw<-tail(data,n= lengthData)
-  ndataw$sample<-basename(ndataw$filename)
-  #print(paste("length(ndataw)=",length(ndataw)))
+  # ndataw<-tail(data,n= lengthData)
+  # ndataw$sample<-basename(ndataw$filename)
+  # print(paste("length(ndataw)=",length(ndataw)))
   
   
   
@@ -852,11 +946,11 @@ getAutoIntersectionForRoughnessAgainstLengthscale<-function(psdAnalysis, AFMImag
     lengthData<-nrow(data)
     
     aorigin<-0
-    borigin <- data[1]$roughness
+    borigin <- data[lengthData]$roughness
     #print(borigin)
     
     finalres2=c()
-    finalres = c(Inf,0,0)
+    finalres = c(Inf,0,0,0,0,0)
     for (i in seq(1, length(x))) {
       x1=x[i]
       for (j in seq(1, length(y))) {
@@ -874,15 +968,18 @@ getAutoIntersectionForRoughnessAgainstLengthscale<-function(psdAnalysis, AFMImag
               myx=data[seq(x2,x1)]$r
               myy=data[seq(x2,x1)]$roughness
             }    
+            slope=(myy[2]-myy[1])/(myx[2]-myx[1])
+            yintersept = myy[1] - slope * myx[1]
             
             res <- lm(myy~myx)
             b<-unname(res$coefficients[1])
             a<-unname(res$coefficients[2])
             inter <- (borigin-b)/a
-            if (inter<finalres[1]) {
-              finalres=c(inter, x1, x2)
-              #print(finalres)
-              
+            if ((inter<finalres[1])&(inter>0)) {
+              finalres=c(inter, x1, x2, borigin, slope, yintersept)
+              # print(finalres)
+              # print(paste(a,b))
+              # print(paste(myx[1],myx[2],myy[1],myy[2]))
             }
           }
         }
@@ -890,28 +987,37 @@ getAutoIntersectionForRoughnessAgainstLengthscale<-function(psdAnalysis, AFMImag
       }
       #finalres2=c(finalres2, inter)
     }
-    return(finalres)
+    AFMImagePSDSlopesAnalysis = new("AFMImagePSDSlopesAnalysis")
+    AFMImagePSDSlopesAnalysis@lc=finalres[1]
+    AFMImagePSDSlopesAnalysis@tangente_point1=finalres[2]
+    AFMImagePSDSlopesAnalysis@tangente_point2=finalres[3]
+    AFMImagePSDSlopesAnalysis@wsat=finalres[4]
+    AFMImagePSDSlopesAnalysis@slope=finalres[5]
+    AFMImagePSDSlopesAnalysis@yintersept=finalres[6]
+    #print(AFMImagePSDSlopesAnalysis)
+    return(AFMImagePSDSlopesAnalysis)
   }
   
   lengthData<-nrow(data)
+  newMax=ceiling(data[c(lengthData),]$r/20)
   
   if (second_slope==FALSE) {
-    aby<-floor(lengthData/10)
-    x <- seq(1,lengthData,by=aby)
+    aby<-1
+    print(aby)
+    x <- seq(1, newMax,by=aby)
+    print(x)
     z <- minimumR(data, space= 1, x,x)
   } else {
-    newMax = lengthData-floor(lengthData*90/100)
-    #print(newMax)
-    aby<-ceil(newMax/150)
-    #print(aby)
-    if (newMax<100) space = 1
-    else space = 100
-    #space
-    x <- seq(1,newMax,by=aby)
+    aby<-1
+    print(aby)
+    space=ceiling(lengthData/4)
+    print(space)
+    x <- seq(newMax,lengthData, by=aby)
     z <- minimumR(data, space= space, x,x)
   }
   return(z)
 }
+
 
 getRoughnessAgainstLengthscale<-function(exportDirectory, sampleName) {
   exportCsvFilename<-paste(sampleName,"-roughness-against-lengthscale.png", sep="")
@@ -929,4 +1035,21 @@ getRoughnessAgainstLengthscaleIntersection<-function(exportDirectory, sampleName
   exportpngFilename<-paste(sampleName,"-roughness-against-lengthscale-intersection.png", sep="")
   exportpngFullFilename<-paste(exportDirectory, exportpngFilename, sep="/")
   return(exportpngFullFilename)
+}
+
+
+getSimplifiedRoughnessAgainstLenghscale<-function(AFMImageAnalyser) {
+  ral<-copy(AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale)
+  ral<-ral[order(r)]
+  ral$simplyfied_r<-round(ral$r)
+  
+  ral<-ral[!duplicated(ral$simplyfied_r),]
+  
+  roughness<-r<-NULL
+  resPSD = data.table(
+    filename=ral$filename,
+    r = ral$r,
+    roughness=ral$roughness
+  )
+  return(resPSD)
 }
