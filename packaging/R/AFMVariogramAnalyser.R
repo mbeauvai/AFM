@@ -121,11 +121,11 @@ AFMImageVariogramAnalysis<-setClass("AFMImageVariogramAnalysis",
                                       fullfilename="character",
                                       updateProgress="function"),
                                     validity = function(object) { 
-                                      if (object@sampleFitPercentage > 1 )
+                                      if (object@sampleFitPercentage > 1 ) {
                                         ## sample can't be more than 100%
+                                        print("sample fit percentage can't be more than 100%")
                                         return(FALSE)
-                                      else
-                                        return(TRUE)
+                                      } else return(TRUE)
                                     }
 )
 
@@ -142,6 +142,7 @@ setMethod("initialize",
             if (!missing(updateProgress)) {
               .Object@updateProgress<-updateProgress  
             }
+            .Object@width<-0
             .Object@sampleFitPercentage <- sampleFitPercentage
             .Object@omnidirectionalVariogram<-data.table()
             .Object@directionalVariograms<-data.table()
@@ -179,6 +180,10 @@ setMethod("variogramModels",signature=signature(object='AFMImageVariogramAnalysi
 setReplaceMethod(f="variogramModels", 
                  signature(AFMImageVariogramAnalysis = "AFMImageVariogramAnalysis", value = "list"),
                  definition= function(AFMImageVariogramAnalysis, value) {
+                   if (is.null(value)) {
+                     print("variogramModels is null")
+                     return(AFMImageVariogramAnalysis)
+                   }
                    AFMImageVariogramAnalysis@variogramModels <- value
                    return(AFMImageVariogramAnalysis)
                  })
@@ -288,6 +293,56 @@ setMethod(f="getDTModelSillRange", "AFMImageVariogramAnalysis",
             }
             return(res)
           })
+
+#' @title AFM Image psd slope analysis
+#' 
+#' @description \code{AFMImageVariogramSlopesAnalysis} stores the analysis of the second slope in roughness against lenghtscale
+#' 
+#' @slot intersection_sill to be removed ?
+#' @slot sill to be removed ?
+#' @slot slope to be removed ?
+#' @slot yintersept to be removed ?
+#' @name AFMImageVariogramSlopesAnalysis-class
+#' @rdname AFMImageVariogramSlopesAnalysis-class
+#' @exportClass AFMImageVariogramSlopesAnalysis
+#' @author M.Beauvais
+AFMImageVariogramSlopesAnalysis<-setClass("AFMImageVariogramSlopesAnalysis",
+                                    slots = c(intersection_sill="numeric", 
+                                              sill="numeric", 
+                                              slope="numeric",
+                                              yintersept="numeric",
+                                              tangente_point1="numeric",
+                                              tangente_point2="numeric"),
+                                    validity = function(object) { 
+                                      return(TRUE)
+                                    }
+)
+
+#' Constructor method of AFMImageVariogramSlopesAnalysis Class.
+#' 
+#' @param .Object an AFMImageVariogramSlopesAnalysis object
+#' @rdname AFMImageVariogramSlopesAnalysis-class
+#' @export
+setMethod("initialize",
+          "AFMImageVariogramSlopesAnalysis",
+          function(.Object) {
+            .Object@intersection_sill<-0
+            .Object@sill<-0
+            .Object@slope<-0
+            .Object@yintersept<-0
+            .Object@tangente_point1<-0
+            .Object@tangente_point2<-0
+            validObject(.Object) ## valide l'objet
+            return(.Object)
+          })
+
+#' Wrapper function AFMImageVariogramSlopesAnalysis
+#'
+#' @rdname AFMImageVariogramSlopesAnalysis-class
+#' @export
+AFMImageVariogramSlopesAnalysis <- function() {
+  return(new("AFMImageVariogramSlopesAnalysis"))
+}
 
 
 #' evaluateVariogramModels method to evaluate the basic variogram models
@@ -399,6 +454,12 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
             # get all vgm models
             allVariogramModelEvaluation<-c()
             notUsedModels<-c("Nug","Int", "Err", "Lin", "Pow", "Leg", "Spl")
+            
+            notUsedModels<-c("Nug","Int", "Err", "Lin", "Pow", "Leg", "Spl")
+            #"Nug","Exp","Sph","Gau","Exc","Mat","Ste","Cir","Lin","Bes","Pen","Per","Wav","Hol","Log","Pow","Spl","Leg","Err","Int"
+            # TODO MB
+            notUsedModels<-c("Nug","Exp","Sph","Gau","Exc","Mat","Ste","Cir","Lin","Bes","Per","Wav","Hol","Log","Pow","Spl","Leg","Err","Int")
+            
             
             # for updateProgress
             counter<-0
@@ -536,7 +597,7 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
                 )
               }
             }
-            AFMImageVariogramAnalysis@variogramModels<-allVariogramModelEvaluation
+            if(!is.null(allVariogramModelEvaluation)) AFMImageVariogramAnalysis@variogramModels<-allVariogramModelEvaluation
             # for each model, evaluate it
             
             return(AFMImageVariogramAnalysis)
@@ -630,7 +691,7 @@ getAutomaticWidthForVariogramCalculation<-function(AFMImage){
 #' library(ggplot2)
 #' 
 #' data(AFMImageOfRegularPeaks)
-#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43)
+#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43/100)
 #' avario<-AFM::calculateOmnidirectionalVariogram(AFMImageVariogramAnalysis= variogramAnalysis, 
 #'                                                AFMImage= AFMImageOfRegularPeaks)
 #' dist<-gamma<-NULL
@@ -643,13 +704,15 @@ getAutomaticWidthForVariogramCalculation<-function(AFMImage){
 #' p
 #' }
 calculateOmnidirectionalVariogram<- function(AFMImageVariogramAnalysis, AFMImage) {
-  if (is.null(AFMImageVariogramAnalysis@width)) {
-    AFMImageVariogramAnalysis@width=getAutomaticWidthForVariogramCalculation(AFMImage)
-    print(paste("using automatic width of", width))
-  }
-  width=AFMImageVariogramAnalysis@width
   
-  print("calculating omnidirectional variogram...")
+  if (is.null(AFMImageVariogramAnalysis@width)||(AFMImageVariogramAnalysis@width==0)) {
+    AFMImageVariogramAnalysis@width=getAutomaticWidthForVariogramCalculation(AFMImage)
+    
+    print(paste("using automatic width of", AFMImageVariogramAnalysis@width))
+  }
+  width<-AFMImageVariogramAnalysis@width
+  
+  print(paste("calculating omnidirectional variogram using width of", width,"..."))
   data<-AFMImage@data
   x<-y<-NULL
   setkey(data,x,y)
@@ -678,7 +741,7 @@ calculateOmnidirectionalVariogram<- function(AFMImageVariogramAnalysis, AFMImage
 #' library(ggplot2)
 #' 
 #' data(AFMImageOfRegularPeaks)
-#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43)
+#' variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43/100)
 #' varios<-AFM::calculateDirectionalVariograms(AFMImage= AFMImageOfRegularPeaks, 
 #'                                             AFMImageVariogramAnalysis= variogramAnalysis)
 #' dist<-gamma<-NULL
@@ -695,10 +758,11 @@ calculateOmnidirectionalVariogram<- function(AFMImageVariogramAnalysis, AFMImage
 #' }
 calculateDirectionalVariograms<- function(AFMImageVariogramAnalysis,AFMImage) {
   print("calculating directional variograms...")
-  if (is.null(AFMImageVariogramAnalysis@width)) {
+  if (is.null(AFMImageVariogramAnalysis@width)||(AFMImageVariogramAnalysis@width==0)) {
     AFMImageVariogramAnalysis@width<-getAutomaticWidthForVariogramCalculation(AFMImage)
-    print(paste("using automatic width of", width))
+    print(paste("using automatic width of", AFMImageVariogramAnalysis@width))
   }
+  
   width<-AFMImageVariogramAnalysis@width
   x<-y<-NULL
   data<-AFMImage@data
@@ -726,6 +790,176 @@ statsFromKrige<-function(name, vgm, part_valid, part_valid_pr) {
   PRESS <- sum(difference^2)
   data.frame(name= name ,model=modelName, cor= cor(part_valid_pr$var1.pred,part_valid$h), press=PRESS)
 }
+
+
+
+#' Calculate slopes and intersections in variogram
+
+#' \code{getAutoIntersectionForOmnidirectionalVariogram} returns the slope in the omnidirectional variograms
+#' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}}
+#' @return an \code{\link{AFMImageVariogramSlopesAnalysis}}
+#' @author M.Beauvais
+#' @export
+getAutoIntersectionForOmnidirectionalVariogram<-function(AFMImageAnalyser){
+  data<-AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram
+  data<-data.table(dist=log10(data$dist), gamma=log10(data$gamma))
+  #data$dist<-as.numeric(data$dist)
+  
+  aval<-max(data$dist)
+  index<-which(data$dist<= aval)[1]
+  
+  lengthData<-length(data$dist)-index
+  print(paste("lengthData=",lengthData))
+  
+  minimumR <- function(data, space, x, y) {
+    lengthData<-nrow(data)
+    
+    aorigin<-0
+    #borigin <- data[lengthData]$gamma
+    borigin <- max(data$gamma)
+    #print(borigin)
+    
+    finalres2=c()
+    finalres = c(Inf,0,0)
+    for (i in seq(1, length(x))) {
+      x1=x[i]
+      for (j in seq(1, length(y))) {
+        if (abs(j-i)>=space) {
+          x2=y[j]
+          
+          if ((x1<1)||(x2<1)||(x1>lengthData)||(x2>lengthData)||(x1==x2)) {
+            inter <- data[1]$dist
+          } else{
+            if (x1<x2) {
+              myx=data[seq(x1,x2)]$dist
+              myy=data[seq(x1,x2)]$gamma
+            }
+            if (x1>x2) {
+              myx=data[seq(x2,x1)]$dist
+              myy=data[seq(x2,x1)]$gamma
+            }    
+            
+            res <- lm(myy~myx)
+            b<-unname(res$coefficients[1])
+            a<-unname(res$coefficients[2])
+            inter <- (borigin-b)/a
+            if ((inter<finalres[1])&(inter>0)) {
+              finalres=c(inter, x1, x2, borigin,a,b)
+              print(finalres)
+            }
+          }
+        }
+        #print(paste(x1, x2))
+      }
+      #finalres2=c(finalres2, inter)
+    }
+    
+    AFMImageVariogramSlopesAnalysis = new("AFMImageVariogramSlopesAnalysis")
+    AFMImageVariogramSlopesAnalysis@intersection_sill=finalres[1]
+    AFMImageVariogramSlopesAnalysis@tangente_point1=finalres[2]
+    AFMImageVariogramSlopesAnalysis@tangente_point2=finalres[3]
+    AFMImageVariogramSlopesAnalysis@sill=finalres[4]
+    AFMImageVariogramSlopesAnalysis@slope=finalres[5]
+    AFMImageVariogramSlopesAnalysis@yintersept=finalres[6]
+    #print(AFMImageVariogramSlopesAnalysis)
+    return(AFMImageVariogramSlopesAnalysis)
+  }
+  
+  lengthData<-nrow(data)
+  #newMax=ceiling(data[c(lengthData),]$dist/20)
+  newMax=2
+  # if (second_slope==FALSE) {
+    aby<-1
+    print(aby)
+    x <- seq(1, newMax,by=aby)
+    print(x)
+    z <- minimumR(data, space= 1, x,x)
+  # } else {
+  #   aby<-1
+  #   print(aby)
+  #   space=ceiling(lengthData/4)
+  #   print(space)
+  #   x <- seq(newMax,lengthData, by=aby)
+  #   z <- minimumR(data, space= space, x,x)
+  # }
+  return(z)
+}
+
+#' Get the graph of the Log Log omnidiretction variogram
+
+#' \code{getLogLogOmnidirectionalSlopeGraph} returns Get the graph of the Log Log omnidirectional variogram
+#' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}}
+#' @param withFratcalSlope a boolean to indicate if the graph should contain a line representating the slope for the calculation of the fractal index and topothesy
+#' @return a ggplot2 graph
+#' @author M.Beauvais
+#' @export
+#' @examples
+#' \dontrun{
+#' library(AFM)
+#' library(ggplot2)
+#' 
+#' data(AFMImageOfRegularPeaks)
+#' 
+#'AFMImageAnalyser = new("AFMImageAnalyser",
+#'          fullfilename="/home/ubuntu/AFMImageOfRegularPeaks-Analyser.txt")
+#'variogramAnalysis<-AFMImageVariogramAnalysis(sampleFitPercentage=3.43/100)
+#'AFMImageAnalyser@variogramAnalysis<-variogramAnalysis
+#'AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram<-
+#'      calculateOmnidirectionalVariogram(AFMImage= AFMImageOfRegularPeaks, 
+#'                                        AFMImageVariogramAnalysis= variogramAnalysis)
+#'p<-getLogLogOmnidirectionalSlopeGraph(AFMImageAnalyser,  withFratcalSlope=TRUE)
+#'p
+#' } 
+getLogLogOmnidirectionalSlopeGraph<-function(AFMImageAnalyser, withFratcalSlope=FALSE) {
+  tryCatch({
+    AFMImageVariogramSlopesAnalysis=getAutoIntersectionForOmnidirectionalVariogram(AFMImageAnalyser)
+    
+    
+    # resVarioDT <- data.table(
+    #   name=basename(AFMImage@fullfilename),
+    #   variogram_slope=AFMImageVariogramSlopesAnalysis@slope
+    # )
+    # 
+    # if (!exists("resVario")) {
+    #   resVario<-copy(resVarioDT)
+    # }else{
+    #   resVario=rbind(resVario,resVarioDT)
+    # }
+    # print(resVario)
+    # 
+    # 
+    # # AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram
+    # # AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram[5,]
+    # # AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram[7,]
+    # 
+    
+    dist<-gamma<-id<-NULL
+    myvgm<-AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram
+    myvgm<-data.table(dist=log10(myvgm$dist), gamma=log10(myvgm$gamma))
+    
+    p1<-ggplot(myvgm, aes(x = dist, y = gamma)) + geom_point()   
+    p1 <- p1 + ylab("semivariance")
+    p1 <- p1 + xlab("distance (nm)")
+    if (withFratcalSlope) {
+      AFMImageVariogramSlopesAnalysis=getAutoIntersectionForOmnidirectionalVariogram(AFMImageAnalyser)
+      p1 <- p1 + geom_abline(intercept = AFMImageVariogramSlopesAnalysis@yintersept, slope = AFMImageVariogramSlopesAnalysis@slope)
+    }
+    p1 <- p1 + ggtitle(paste0(basename(AFMImage@fullfilename)," semivariance - slope=", AFMImageVariogramSlopesAnalysis@slope ))
+    p1 <- p1 + expand_limits(y = 0)
+    p1 <- p1 + guides(colour=FALSE)
+    return(p1)
+    
+    # png(file = paste0(exportDirectory,"/",basename(AFMImage@fullfilename),"-variograms.png"), bg = "transparent", width = 1024, height = 768)
+    # print(p1)
+    # dev.off()
+    
+    
+  }, error = function(e) {print(paste("Impossible to find variograms intersections automaticaly",e))})
+  
+}
+
+
+
 
 saveSpplotFromKrige<-function(fullfilename, modelName, part_valid_pr, cuts, withoutLegend) {
   if(missing(withoutLegend)) {
