@@ -1,6 +1,6 @@
 library(shiny)
 library(shinyjs)
-library(rglwidget)
+library(rgl)
 
 shinyUI(
   navbarPage('AFM Image Analysis',
@@ -101,26 +101,27 @@ shinyUI(
                                 imageOutput('fractalDimensionsFractalPlots_fd2d_filter1')
                               )
                             )),
-#              tabPanel('Networks',
-#                       sidebarLayout(
-#                         sidebarPanel(
-#                           uiOutput('imageNameNetworks'),
-#                           registerSceneChange(),
-#                           tags$hr(),
-#                           sliderInput('heightNetworksslider', label = 'Height multiplier',
-#                                       min = 0.1, max = 10, value = 1, step=0.1),
-#                           sliderInput('filterNetworksslider', label = 'Filter',
-#                                       min = 0.1, max = 10, value = c(1,10), step=0.1),
-#                           actionButton('checkFilterNetworksButton', label = 'Check filter'),
-#                           actionButton('calculateNetworksNetworksButton', label = 'Calculate networks')
-#                         ),
-#                         mainPanel(
-#                           uiOutput('panelNetworksUI'),
-#                           plotOutput("distNetworksPlot"),
-#                           plotOutput("newImageNetworksPlot"),
-#                           plotOutput("skeletonImageNetworksPlot")
-#                         )
-#                       )),
+             tabPanel('Networks',
+                      sidebarLayout(
+                        sidebarPanel(
+                          uiOutput('imageNameNetworks'),
+                          registerSceneChange(),
+                          tags$hr(),
+                          sliderInput('heightNetworksslider', label = 'Height multiplier',
+                                      min = 0.1, max = 10, value = 1, step=0.1),
+                          sliderInput('filterNetworksslider', label = 'Filter',
+                                      min = 0.1, max = 10, value = c(1,10), step=0.1),
+                          actionButton('checkFilterNetworksButton', label = 'Check filter'),
+                          uiOutput('smallBranchesNetworksNetworksCheckboxInput'),
+                          actionButton('calculateNetworksNetworksButton', label = 'Calculate networks')
+                        ),
+                        mainPanel(
+                          uiOutput('panelNetworksUI'),
+                          plotOutput("skeletonImageNetworksPlot"),
+                          plotOutput("newImageNetworksPlot"),
+                          plotOutput("distNetworksPlot")
+                         )
+                       )),
                    tabPanel('3D',
                             sidebarLayout(
                               sidebarPanel(
