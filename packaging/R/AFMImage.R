@@ -322,7 +322,7 @@ sampleAFMImage<-function(AFMImage, percentage) {
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
 #' @param cornerX horizontal coordinates of the extract
 #' @param cornerY vertical coordinates of the extract
-#' @param size square size of the extract
+#' @param size square size of the extract in number of pixels
 #' @return a new  \code{\link{AFMImage}} sample
 #' @author M.Beauvais
 #' @export
@@ -332,6 +332,7 @@ sampleAFMImage<-function(AFMImage, percentage) {
 #' anAFMImageExtract<-extractAFMImage(AFMImageOfAluminiumInterface,15,15,256)
 #' 
 extractAFMImage<-function(AFMImage, cornerX, cornerY, size) {
+  size2<-size
   size<-size-1
   
   cornerX<-cornerX*AFMImage@hscansize/AFMImage@samplesperline
@@ -354,9 +355,14 @@ extractAFMImage<-function(AFMImage, cornerX, cornerY, size) {
   alldata<-alldata[x>=minX & x<=maxX & y>=minY & y<=maxY]
   alldata$x<-alldata$x-min(alldata$x)
   alldata$y<-alldata$y-min(alldata$y)
-  vscansize<-max(alldata$x)-min(alldata$x)+1
-  hscansize<-max(alldata$y)-min(alldata$y)+1
+  
+  
+  hscansize<-AFMImage@hscansize/(AFMImage@samplesperline/size2)
+  vscansize<-AFMImage@vscansize/(AFMImage@lines/size2)
+  # vscansize<-max(alldata$x)-min(alldata$x)+1
+  # hscansize<-max(alldata$y)-min(alldata$y)+1
   scansize<-max(vscansize, hscansize)
+  
   samplesperline<-length(unique(alldata$y))
   lines<-length(unique(alldata$x))
   fullfilename<-paste(AFMImage@fullfilename, "extract.txt", sep="-")
@@ -460,3 +466,62 @@ simplifyAFMImage<-function(AFMImage, newSamplesperline, newLines) {
   return(newAFMImage)
   
 }
+
+
+#' multiply the heights of an AFMImage
+#' 
+#' \code{multiplyHeightsAFMImage} returns a simplified AFMImage
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param multiplier the number to multiply the heights with
+#' @return an \code{\link{AFMImage}}
+#' @author M.Beauvais
+#' @export
+#' @rdname AFMImage-multiplyHeightsAFMImage
+#' @examples
+#' data(AFMImageOfAluminiumInterface)
+#' newAFMImage<-multiplyHeightsAFMImage(AFMImageOfAluminiumInterface,10)
+#' displayIn3D(newAFMImage)
+#' 
+multiplyHeightsAFMImage<-function(AFMImage, multiplier) {
+  newAFMImage<-copy(AFMImage)
+  heights<-newAFMImage@data$h*multiplier
+  newAFMImage@data$h<-heights
+  return(newAFMImage)
+}
+
+#' filter the heights of an AFMImage with a minimun and a maximum value
+#' 
+#' \code{filterAFMImage} returns a filtered AFMImage
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @param Min the minimun height value to keep
+#' @param Max the maximun height value to keep
+#' @return an \code{\link{AFMImage}}
+#' @author M.Beauvais
+#' @export
+#' @rdname AFMImage-filterAFMImage
+filterAFMImage<-function(AFMImage, Min, Max) {
+  newAFMImage<-copy(AFMImage)
+  heights<-newAFMImage@data$h
+  heights<-heights+abs(min(heights))
+  heights[heights<Min]<-0
+  heights[heights>Max]<-0
+  newAFMImage@data$h<-heights
+  return(newAFMImage)
+}
+
+#' make a binary AFMImage setting all the heights different to 0 to 1.
+#' 
+#' \code{makeBinaryAFMImage} returns a binary AFMImage
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @return an \code{\link{AFMImage}}
+#' @author M.Beauvais
+#' @export
+#' @rdname AFMImage-makeBinaryAFMImage
+makeBinaryAFMImage<-function(AFMImage) {
+  newAFMImage<-copy(AFMImage)
+  heights<-newAFMImage@data$h
+  heights[heights!=0]<-1
+  newAFMImage@data$h<-heights
+  return(newAFMImage)
+}
+
