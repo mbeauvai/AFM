@@ -9,7 +9,7 @@ require(sp)
 require("stringr")
 
 require(gridExtra)
-require(reshape2)
+#require(reshape2)
 require(ggplot2)
 
 if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("h", "x", "y","TheData","chosenFitSample","predict.gstat"))
@@ -432,7 +432,8 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
             part_model2 <- TheData[chosenFitSample, ]
             
             coordinates(part_model) = ~x+y
-            proj4string(part_model)=CRS("+init")
+            #proj4string(part_model)=CRS("+init")
+            proj4string(part_model)=CRS()
             is.projected(part_model)
             
             part_valid <- TheData[-chosenFitSample, ] 
@@ -440,7 +441,8 @@ setMethod(f="evaluateVariogramModels", "AFMImageVariogramAnalysis",
             part_valid <- TheData
             part_valid2 <- TheData
             coordinates(part_valid) = ~x+y
-            proj4string(part_valid)=CRS("+init")
+            #proj4string(part_valid)=CRS("+init")
+            proj4string(part_valid)=CRS()
             is.projected(part_valid)
             
             # starting value to fit the models
@@ -717,7 +719,8 @@ calculateOmnidirectionalVariogram<- function(AFMImageVariogramAnalysis, AFMImage
   x<-y<-NULL
   setkey(data,x,y)
   coordinates(data) = ~x+y
-  proj4string(data)=CRS("+init")
+  #proj4string(data)=sp::CRS("+no_defs")
+  proj4string(data)=CRS()
   is.projected(data)
   return(data.table(gstat::variogram(data$h ~ x+y , data, width=width)))
 }
@@ -768,7 +771,8 @@ calculateDirectionalVariograms<- function(AFMImageVariogramAnalysis,AFMImage) {
   data<-AFMImage@data
   setkey(data,x,y)
   coordinates(data) = ~x+y
-  proj4string(data)=CRS("+init")
+  #proj4string(data)=CRS("+init")
+  proj4string(data)=CRS()
   is.projected(data)
   return(data.table(gstat::variogram(data$h ~ x+y, data, width=width, alpha = c(0, 45, 90, 135))))
 }
@@ -1004,7 +1008,8 @@ getSpplotColors<-function(colLimit) {
 getCutsOfSpplotFromAFMImage<-function(AFMImage) {
   initialAFMImage<-as.data.frame(AFMImage@data)
   coordinates(initialAFMImage) = ~x+y
-  proj4string(initialAFMImage)=CRS("+init")
+  #proj4string(initialAFMImage)=CRS("+init")
+  proj4string(initialAFMImage)=CRS()
   is.projected(initialAFMImage)
   
   p<-spplot(initialAFMImage["h"])
@@ -1082,7 +1087,8 @@ getSpplotFromAFMImage<-function(AFMImage, expectedWidth, expectHeight, withoutLe
   
   initialAFMImage<-as.data.frame(AFMImage@data)
   coordinates(initialAFMImage) = ~x+y
-  proj4string(initialAFMImage)=CRS("+init")
+  #proj4string(initialAFMImage)=CRS("+init")
+  proj4string(initialAFMImage)=CRS()
   is.projected(initialAFMImage)
   
   cuts <- getCutsOfSpplotFromAFMImage(AFMImage)

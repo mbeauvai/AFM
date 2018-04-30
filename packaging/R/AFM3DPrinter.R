@@ -7,7 +7,7 @@ require("gstat")
 require(sp)
 
 require(rgl)
-require(reshape2)
+#require(reshape2)
 
 setOldClass("mesh3d")
 
@@ -42,21 +42,10 @@ AFMImage3DModelAnalysis<-setClass("AFMImage3DModelAnalysis",
 #' @param fullfilename (optional) the directory and filename to save the png of the 3D image. If this variable is missing, the function will not save on disk the 3D image.
 #' @param width (optional)  width of the image. Default is 512 pixels. Note: width can't be superior to screen resolution.
 #' @param changeViewpoint (optional) if TRUE, the viewpoint is changed. Default is TRUE.
+#' @param noLight if TRUE, the ligth is set off
 #' @author M.Beauvais
 #' @export
-#' @examples
-#' library(AFM)
-#' 
-#' data(AFMImageOfAluminiumInterface)
-#' newAFMImage<-extractAFMImage(AFMImageOfAluminiumInterface, cornerX=50, cornerY=50, size=256)
-#' displayIn3D(newAFMImage, 1024)
-#'
-#' \dontrun{
-#' AFMImage<-importFromNanoscope("/user/ubuntu/myNanoscopeAnalysisAFMImage.txt")
-#' displayIn3D(AFMImage, 1024, "/users/ubuntu/myRglAFMimage.png")
-#' }
-#' 
-displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
+displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint, noLight) {
   if(missing(width)){
     width <- 512
   }
@@ -67,12 +56,11 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
   }
   if(missing(changeViewpoint)){
     changeViewpoint<-TRUE
-  }else{
-    changeViewpoint<-FALSE
   }
   
   # respect the proportion between horizontal / vertical distance and heigth
   newHeights <- (AFMImage@data$h)*(AFMImage@samplesperline)/(AFMImage@scansize)
+  newHeights <- (AFMImage@data$h)
   
   minH<-min(newHeights)
   # TODO check validity of created image instead
@@ -87,23 +75,46 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
     ylen <- ylim[2] - ylim[1] + 1
     print(ylen)
     colorlut <- heat.colors(ylen, alpha = 1) # height color lookup table
+    
+    if (length(colorlut)==2) {
+      colorlut <-c("#FFFFFFFF","#FFFF00FF")
+    }else{
+      colorlut <- heat.colors(ylen, alpha = c(0,rep(1,length(colorlut)-1))) # height color lookup table  
+    }
+    #print(colorlut)
+    
+    
+    
+    
     col <- colorlut[ y-ylim[1]+1 ] # assign colors to heights
     
     rgl.open()
     par3d(windowRect = 100 + c( 0, 0, width, width ) )
-    rgl.bg(color = c("white"),  back = "lines")
+    rgl.bg(color = c("white"),  alpha=c(0.0), back = "lines")
     
     bboxylen=3
     if(ylim[2]<60) bboxylen=2
     
+    
+    #print(col)
+    #print(c(0.0,rep(1.0,length(col)-1)))
     rgl.bbox(color = c("#333333", "black"), emission = "#333333", 
-             specular = "#111111", shininess = 0, alpha = 0.6, xlen=0, zlen=0, ylen=bboxylen )
-    rgl.surface(x, z, y, color=col, back="lines")
+             specular = "#111111", shininess = 0, alpha = 0.0, xlen=0, zlen=0, ylen=bboxylen )
+    rgl.surface(x, z, y, color=col, alpha=c(0.0,rep(1.0,length(col)-1)), back="lines") 
     
     if (changeViewpoint) {
-      i<-130
-      rgl.viewpoint(i,i/4,zoom=1.1)
+      i<-180
+      rotate3d(c(2, 0, 0), pi/2, 0, 1, 0)
+      rgl.viewpoint(-i/2,i/2,zoom=0.5)
     }
+    
+    if (noLight) {
+      rgl.clear( type = "lights" )
+      clear3d( type = c("lights")) 
+      rgl.light( theta = 0, phi = 0, viewpoint.rel = TRUE, ambient = "#FFFFFF", 
+                 diffuse = "#FFFFFF", specular = "#000000")
+    }
+    
     if (save) {
       print(paste("saving", basename(fullfilename)))
       rgl.snapshot(fullfilename)
@@ -113,7 +124,22 @@ displayIn3D<- function(AFMImage, width, fullfilename, changeViewpoint) {
   return(FALSE)
 }
 
-
+#' Display a 3D image of the holes in an AFMImage and store it on disk.
+#'
+#' Display a 3D image of  the holes in an AFMImage and store it on disk if fullfilename variable is set.
+#' It uses the \code{\link{rgl}} package.
+#' 
+#' @param AFMImage the AFM image to be displayed in three dimensions.
+#' @param fullfilename (optional) the directory and filename to save the png of the 3D image. If this variable is missing, the function will not save on disk the 3D image.
+#' @param width (optional)  width of the image. Default is 512 pixels. Note: width can't be superior to screen resolution.
+#' @param changeViewpoint (optional) if TRUE, the viewpoint is changed. Default is TRUE.
+#' @param noLight if TRUE, the ligth is set off
+#' @author M.Beauvais
+#' @export
+displayHolesIn3D<- function(AFMImage, width, fullfilename, changeViewpoint, noLight) {
+  invertBinaryAFMImage<-invertBinaryAFMImage(AFMImage)
+  displayIn3D(AFMImage=invertBinaryAFMImage, width=width, fullfilename=fullfilename, changeViewpoint=changeViewpoint, noLight=noLight)
+}
 
 #' Calculate the 3D model for 3D printing
 #'
@@ -336,10 +362,18 @@ setMethod(f="calculate3DModel", "AFMImage3DModelAnalysis",
 #' @examples
 #' \dontrun{
 #' library(AFM)
-#' 
-#' data(AFMImageOfAluminiumInterface)
-#' newAFMImage<-extractAFMImage(AFMImageOfAluminiumInterface, cornerX=50, cornerY=50, size=64)
-#' exportToSTL(newAFMImage, paste(tempdir(), "myFile.stl", sep="/"))
+#' data("AFMImageOfRegularPeaks")
+#' AFMImage<-AFMImageOfRegularPeaks
+#' # calculate the 3D model : surface and the faces
+#' AFMImage3DModelAnalysis<-new ("AFMImage3DModelAnalysis")
+#' AFMImage3DModelAnalysis<-calculate3DModel(AFMImage3DModelAnalysis= AFMImage3DModelAnalysis,
+#'                                           AFMImage= AFMImage)
+#' # export the 3D model to file
+#' exportDirectory=tempdir()
+#' print(paste("saving model in ", exportDirectory))
+#' exportToSTL(AFMImage3DModelAnalysis=AFMImage3DModelAnalysis,
+#'             AFMImage=AFMImage, 
+#'             stlfullfilename=paste(exportDirectory, "myFile.stl", sep="/"))
 #' }
 exportToSTL<- function(AFMImage3DModelAnalysis, AFMImage, stlfullfilename) {
   
@@ -486,7 +520,12 @@ saveHorizontalSlices<-function(AFMImage, numberOfSlices, width, fullfilename) {
   
 }
 
-
+#' get 3D image full filename
+#' 
+#' @param exportDirectory a diretcory to export image
+#' @param imageName the image name
+#' @author M.Beauvais
+#' @export
 get3DImageFullfilename<-function(exportDirectory, imageName) {
   fullfilename<-paste(exportDirectory, paste(imageName,"3D.png",sep="."), sep="/")
   return(fullfilename)

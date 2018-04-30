@@ -14,7 +14,7 @@ require(gridExtra)
 require(moments)    
 require(ggplot2)
 
-require(reshape2)
+#require(reshape2)
 
 # for reporting
 require(png)
@@ -288,10 +288,12 @@ setGeneric(name= "getRoughnessParameters",
 #' @aliases getRoughnessParameters,AFMImage-method
 setMethod(f="getRoughnessParameters", "AFMImage",
           definition= function(AFMImage) {
+            # simple surface area
+            area=AFMImage@hscansize*AFMImage@vscansize
             # surface parameters
             surfaceArea<- surfaceArea(matrix(AFMImage@data$h,nrow = AFMImage@lines,ncol = AFMImage@samplesperline),
-                        cellx = AFMImage@hscansize/AFMImage@samplesperline, celly = AFMImage@vscansize/AFMImage@lines, 
-                        byCell = FALSE)
+                                      cellx = AFMImage@hscansize/AFMImage@samplesperline, celly = AFMImage@vscansize/AFMImage@lines, 
+                                      byCell = FALSE)
             
             # image(surfaceArea(matrix(AFMImage@data$h,nrow = AFMImage@lines,ncol = AFMImage@samplesperline),
             #                   cellx = AFMImage@hscansize/AFMImage@samplesperline, celly = AFMImage@vscansize/AFMImage@lines, 
@@ -308,9 +310,8 @@ setMethod(f="getRoughnessParameters", "AFMImage",
             
             # hybrid parameters
             
-            return(data.table(totalRMSRoughness_TotalRrms, MeanRoughness_Ra, surfaceArea))
+            return(data.table(totalRMSRoughness_TotalRrms, MeanRoughness_Ra, area, surfaceArea))
           })
-
 
 #' Check the isotropy of a sample
 #' 
@@ -451,10 +452,10 @@ getLibrariesVersions<-function() {
                             "gstat",
                             "fractaldim", 
                             "fftwtools"),
-                      version=c(AFMPackage$Version,
-                                gstatPackage$Version,
-                                fractaldimPackage$Version,
-                                fftwtoolsPackage$Version)
+                      version=c(AFMPackage[1,]$Version,
+                                gstatPackage[1,]$Version,
+                                fractaldimPackage[1,]$Version,
+                                fftwtoolsPackage[1,]$Version)
                       )
   return(versions)
 }

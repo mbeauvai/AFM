@@ -12,7 +12,7 @@ require("stringr")
 require(gridExtra)
 require(ggplot2)
 
-require(reshape2)
+#require(reshape2)
 
 # for reporting
 require(png)
@@ -159,7 +159,8 @@ generateCheckReport <- function(AFMImage) {
   reportDirectory<-paste(sampleDirectory, "outputs", sep="/")
   createReportDirectory(reportDirectory)
   
-  AFMImageAnalyser<-checkIsotropy(AFMImage)
+  AFMImageAnalyser<-new("AFMImageAnalyser", AFMImage= AFMImage, fullfilename = AFMImage@fullfilename)
+  AFMImageAnalyser<-checkIsotropy(AFMImage,AFMImageAnalyser)
   putAnalysisOnDisk(AFMImageAnalyser, AFMImage)
   
   #   sampleName<-basename(AFMImage@fullfilename)
@@ -225,7 +226,7 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
   
   # save all images necessary for the report on disk
   putImagesFromAnalysisOnDisk(AFMImageAnalyser, AFMImage, reportDirectory)
-
+  
   print(paste("creating", basename(reportFullfilename), "..."))
   pdf(reportFullfilename, width=8.27, height=11.69)
   
@@ -331,7 +332,7 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
       }
       #print(plotBestVariogramModelsTable)
     }
-
+    
     # best variogram models page
     if (!length(AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram)==0) {
       # chosen sample
@@ -359,11 +360,14 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
       grid.raster(chosenFitSampleImg,vp=vp2)
       #vp4<-viewport(layout.pos.row = 9, layout.pos.col = 2)
       #grid.text("Sample",  vp=vp4, gp=gpar(fontsize=10, col="black"))    
-
-      vp5<-viewport(layout.pos.row = 4:7, layout.pos.col = 1:2)
-      print(plotBestVariogramModelsTable,vp=vp5)
       
-      printVariogramModelEvaluations(AFMImageAnalyser, sampleDT, numberOfModelsPerPage)
+      totalVariogramModels=length(AFMImageAnalyser@variogramAnalysis@variogramModels)
+      #print(totalVariogramModels)
+      if (totalVariogramModels>0) {
+        vp5<-viewport(layout.pos.row = 4:7, layout.pos.col = 1:2)
+        print(plotBestVariogramModelsTable,vp=vp5)
+        printVariogramModelEvaluations(AFMImageAnalyser, sampleDT, numberOfModelsPerPage)
+      }
     }
     
     
@@ -730,26 +734,27 @@ exportVariogramImagesForReport<- function(AFMImageAnalyser, AFMImage, exportDire
     # save images from variogram modeling
     totalVariogramModels=length(AFMImageAnalyser@variogramAnalysis@variogramModels)
     #print(totalVariogramModels)
-    fullfilename<-AFMImage@fullfilename
-    cuts<-AFMImageAnalyser@variogramAnalysis@cuts
-    for (i in seq(1,totalVariogramModels)) {
-      #print(AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@res)
-      testedModel<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@model
-      print(testedModel)
-      if (testedModel=="Wav2") { 
-        vgm<-vgm( 5, "Exp", 1, add.to = vgm(5, "Wav", 1, nugget = 2.5))
-      }else{
-        vgm<-vgm(5,testedModel,1,0)
+    if (totalVariogramModels>0) {
+      fullfilename<-AFMImage@fullfilename
+      cuts<-AFMImageAnalyser@variogramAnalysis@cuts
+      for (i in seq(1,totalVariogramModels)) {
+        #print(AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@res)
+        testedModel<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@model
+        print(testedModel)
+        if (testedModel=="Wav2") { 
+          vgm<-vgm( 5, "Exp", 1, add.to = vgm(5, "Wav", 1, nugget = 2.5))
+        }else{
+          vgm<-vgm(5,testedModel,1,0)
+        }
+        mykrige<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@mykrige
+        
+        predictedspplotfullfilename<-getSpplotPredictedImageFullfilename(exportDirectory, sampleName, testedModel)
+        saveSpplotFromKrige(predictedspplotfullfilename, vgm,mykrige,cuts, withoutLegend = TRUE)  
+        predictedAFMImage<-getAFMImageFromKrige(AFMImage, vgm, mykrige)
+        class(predictedAFMImage) = c("AFMImage")
+        #displayIn3D(predictedAFMImage,1024, full2Dfilename,noLight=TRUE))
+        export3DImageForReport(predictedAFMImage, exportDirectory)
       }
-      mykrige<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@mykrige
-      
-      predictedspplotfullfilename<-getSpplotPredictedImageFullfilename(exportDirectory, sampleName, testedModel)
-      saveSpplotFromKrige(predictedspplotfullfilename, vgm,mykrige,cuts, withoutLegend = TRUE)  
-      predictedAFMImage<-getAFMImageFromKrige(AFMImage, vgm, mykrige)
-      class(predictedAFMImage) = c("AFMImage")
-      #displayIn3D(predictedAFMImage,1024, full2Dfilename)
-      export3DImageForReport(predictedAFMImage, exportDirectory)
-      
     }
   }
   
@@ -801,10 +806,52 @@ exportPSDImagesForReport<-function(AFMImageAnalyser, AFMImage, exportDirectory) 
   }
 }
 
+getGgplotFromDataTable<-function(DT, removeRowNames, removeColNames) {
+  if (missing(removeRowNames)) removeRowNames<-TRUE
+  if (missing(removeColNames)) removeColNames<-FALSE
+  
+  mytheme <- gridExtra::ttheme_default(
+    core = list(fg_params=list(cex = 0.8)),
+    colhead = list(fg_params=list(cex = 0.9)),
+    rowhead = list(fg_params=list(cex = 0.9)))
+  
+  qplotFromDataTable<- qplot(1:15, 1:15, geom = "blank") + 
+    theme_bw() +
+    theme(line = element_blank(), text = element_blank())
+  if ((removeRowNames)&&(removeColNames)) {
+    qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, rows = NULL, cols=NULL))
+  }else{
+    if (removeRowNames) {
+      qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, rows = NULL))
+    }else{
+      if (removeColNames) {
+        qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, cols = NULL))
+      }else{
+        qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme))
+      }
+    }
+  }
+  
+  return(qplotFromDataTable)
+}
+
+export3DImageForReport<-function(AFMImage, exportDirectory, noLight) {
+  library(AFM)
+  library(rgl)
+  sampleName<-basename(AFMImage@fullfilename)
+  rglImagefullfilename<-get3DImageFullfilename(exportDirectory, sampleName)
+  
+  if (displayIn3D(AFMImage, width=1024, fullfilename=rglImagefullfilename,changeViewpoint=TRUE, noLight= noLight)) {
+    rgl.viewpoint(zoom=2)
+    rgl.close()
+  }
+}
+
+
 export3DImageForReport<-function(AFMImage, exportDirectory) {
   sampleName<-basename(AFMImage@fullfilename)
   rglImagefullfilename<-get3DImageFullfilename(exportDirectory, sampleName)
-  if (displayIn3D(AFMImage, 1024, rglImagefullfilename)) {
+  if (displayIn3D(AFMImage, width=1024, fullfilename=rglImagefullfilename,noLight=FALSE)) {
     rgl.close()
   }
 }

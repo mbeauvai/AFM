@@ -5,6 +5,7 @@ require("gstat")
 require("sp")
 require("stringr")
 #require(reshape2)
+library("dbscan")
 
 if(getRversion() >= "3.1.0") utils::suppressForeignCheck(c("x", "y"))
 
@@ -159,6 +160,19 @@ NULL
 #' @name AFMImageOfNormallyDistributedHeights
 NULL
 
+#' AFM image sample
+#'
+#' A real dataset containing an \code{\link{AFMImage}} of a collagen network.
+#' The image is made of 192*192 samples of a 1500 nm * 1500 nm surface.
+#' samplesperline=192
+#' lines=192
+#' hscansize=1500
+#' vscansize=1500
+#'
+#' @name AFMImageCollagenNetwork
+NULL
+
+
 #' Import data from nanoscope analysis(tm) tool
 #'
 #' The imported file should contain a header and list of heights
@@ -180,7 +194,7 @@ NULL
 #' 
 #' fullfilename<-"/user/ubuntu/NanoscopeFlattenExportedFile.txt"
 #' myAFMimage<-importFromNanoscope(fullfilename)
-#' displayIn3D(myAFMimage, 1024)
+#' displayIn3D(myAFMimage, width=1024, noLight=TRUE))
 #' }
 importFromNanoscope<-function(fullfilename){
   
@@ -244,6 +258,23 @@ importFromNanoscope<-function(fullfilename){
               fullfilename = fullfilename))
 }
 
+getAFMImageFromMatrix<-function(binaryAFMImage, aMatrix) {
+  Lines<-binaryAFMImage@lines
+  Samplesperline<-binaryAFMImage@samplesperline
+  ScanSize<-binaryAFMImage@scansize
+  scanby<-binaryAFMImage@scansize/binaryAFMImage@samplesperline
+  endScan<-binaryAFMImage@scansize*(1-1/binaryAFMImage@samplesperline)
+  fullfilename="circlesMatrixImage"
+  
+  circlesMatrixAFMImage<-AFMImage(
+    data = data.table(x = rep(seq(0,endScan, by= scanby), times = Lines),
+                      y = rep(seq(0,endScan, by= scanby), each = Samplesperline), 
+                      h = as.vector(aMatrix)),
+    samplesperline = Samplesperline, lines = Lines, 
+    vscansize = ScanSize, hscansize = ScanSize, scansize = ScanSize, 
+    fullfilename = fullfilename )
+  return(circlesMatrixAFMImage)
+}
 
 #' Save an AFM image on disk.
 #' 
@@ -256,13 +287,14 @@ importFromNanoscope<-function(fullfilename){
 #' @rdname AFMImage-saveOnDisk
 #' @export
 #' @examples
+#' \dontrun{
 #' library(AFM)
 #' 
 #' data(AFMImageOfAluminiumInterface)
 #' # save the rdata file of the AFMImage in the tempdir() directory;
 #' # select another directory to save it permanently on your hard drive
 #' saveOnDisk(AFMImageOfAluminiumInterface, tempdir())
-#' 
+#' }
 saveOnDisk<-function(AFMImage, exportDirectory){
   if (missing(exportDirectory)) {
     exportDirectory=dirname(AFMImage@fullfilename)
@@ -480,7 +512,7 @@ simplifyAFMImage<-function(AFMImage, newSamplesperline, newLines) {
 #' @examples
 #' data(AFMImageOfAluminiumInterface)
 #' newAFMImage<-multiplyHeightsAFMImage(AFMImageOfAluminiumInterface,10)
-#' displayIn3D(newAFMImage)
+#' displayIn3D(newAFMImage,noLight=TRUE)
 #' 
 multiplyHeightsAFMImage<-function(AFMImage, multiplier) {
   newAFMImage<-copy(AFMImage)
@@ -499,6 +531,7 @@ multiplyHeightsAFMImage<-function(AFMImage, multiplier) {
 #' @author M.Beauvais
 #' @export
 #' @rdname AFMImage-filterAFMImage
+#' 
 filterAFMImage<-function(AFMImage, Min, Max) {
   newAFMImage<-copy(AFMImage)
   heights<-newAFMImage@data$h
@@ -517,7 +550,9 @@ filterAFMImage<-function(AFMImage, Min, Max) {
 #' @author M.Beauvais
 #' @export
 #' @rdname AFMImage-makeBinaryAFMImage
+#' 
 makeBinaryAFMImage<-function(AFMImage) {
+  
   newAFMImage<-copy(AFMImage)
   heights<-newAFMImage@data$h
   heights[heights!=0]<-1
@@ -525,3 +560,110 @@ makeBinaryAFMImage<-function(AFMImage) {
   return(newAFMImage)
 }
 
+
+
+#' invert a binary AFMImage 
+#' 
+#' \code{invertBinaryAFMImage} returns a binary AFMImage
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @return an \code{\link{AFMImage}}
+#' @author M.Beauvais
+#' @export
+#' @rdname AFMImage-invertBinaryAFMImage
+#' 
+#' @examples
+#' \dontrun{
+#' library(AFM)
+#' data(AFMImageOfAluminiumInterface)
+#' newAFMImage<-copy(AFMImageOfAluminiumInterface)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' newAFMImage<-multiplyHeightsAFMImage(newAFMImage, multiplier=2)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' newAFMImage<-filterAFMImage(newAFMImage,  Min=140, Max=300)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' newAFMImage<-makeBinaryAFMImage(newAFMImage)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' newAFMImage<-invertBinaryAFMImage(newAFMImage)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' }
+invertBinaryAFMImage<-function(AFMImage){
+  
+  # check if binary
+  if (all(AFMImage@data$h %in% c(0,1))) {
+    mm<-matrix(AFMImage@data$h, ncol =AFMImage@samplesperline)
+    mm[mm == 0] <- 2
+    mm[mm == 1] <- 0
+    mm[mm == 2] <- 1
+    invertedBinaryAFMImage<-copy(AFMImage)
+    invertedBinaryAFMImage@data$h<-as.vector(mm)
+    return(invertedBinaryAFMImage)
+  }else{
+    stop("AFMImage is not a binary AFMImage")
+  }
+}
+
+#' calculate statistics about holes in a binary image 
+#' 
+#' \code{getHolesStatistics} returns a binary AFMImage
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @return an \code{\link{AFMImage}}
+#' @author M.Beauvais
+#' @export
+#' @rdname AFMImage-getHolesStatistics
+#' @examples
+#' \dontrun{
+#' library(AFM)
+#' 
+#' data(AFMImageOfAluminiumInterface)
+#' newAFMImage<-copy(AFMImageOfAluminiumInterface)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' newAFMImage<-multiplyHeightsAFMImage(newAFMImage, multiplier=2)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' newAFMImage<-filterAFMImage(newAFMImage,  Min=140, Max=300)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' newAFMImage<-makeBinaryAFMImage(newAFMImage)
+#' displayIn3D(newAFMImage,noLight=TRUE)
+#' 
+#' holesStats<-getHolesStatistics(newAFMImage)
+#' print(holesStats)
+#' }
+getHolesStatistics<-function(AFMImage) {
+  if (isBinary(AFMImage)) {
+    
+    invertBinaryAFMImage<-invertBinaryAFMImage(AFMImage)
+    #displayIn3D(AFMImage=invertBinaryAFMImage, noLight=FALSE)
+    
+    mm<-matrix(invertBinaryAFMImage@data$h, ncol = invertBinaryAFMImage@samplesperline)
+    #pimage(mm)
+    
+    res<-which(mm!=0,arr.ind = T)
+    res
+    islandsDT<-data.table(y=res[,1], x=res[,2])
+    rm(res)
+    
+    
+    DBSCAN <- dbscan(islandsDT, eps = 1, MinPts = 3, borderPoints=FALSE)
+    #plot(islandsDT$x, islandsDT$y, col = DBSCAN$cluster, pch = 20)
+    
+    islandsDT$cluster<-DBSCAN$cluster
+    return(islandsDT)
+  }else{
+    stop("AFMImage is not a binary AFMImage")
+  }
+}
+
+
+#' has the AFM Image heights of 0 or 1
+#' 
+#' \code{isBinary} returns TRUE is the heights of the AFMImage is 0 or 1
+#' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
+#' @return a boolean
+#' @author M.Beauvais
+#' @export
+#' @rdname AFMImage-isBinary
+isBinary<-function(AFMImage) {
+  if (all(AFMImage@data$h %in% c(0,1))) {
+    return(TRUE)
+  }
+  return(FALSE)
+}

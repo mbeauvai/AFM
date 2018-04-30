@@ -12,7 +12,7 @@ require("stringr")
 require(gridExtra)
 require(ggplot2)
 
-require(reshape2)
+#require(reshape2)
 
 require(stats)
 
@@ -307,7 +307,7 @@ setReplaceMethod(f="intersections",
 #' data(AFMImageOfNormallyDistributedHeights)
 #' AFMImage<-AFMImageOfNormallyDistributedHeights
 #' nMheightsData= matrix(AFMImage@@data$h, nrow=AFMImage@@samplesperline)
-#' shiftedFFT2D<-shiftFFT2D(fftw2d(nMheightsData))
+#' shiftedFFT2D<-shiftFFT2D(fftwtools::fftw2d(nMheightsData))
 shiftFFT2D<-function(fft2data) { 
   N=nrow(fft2data)
   M=ncol(fft2data)
@@ -380,7 +380,7 @@ shiftFFT2D<-function(fft2data) {
 #' p5
 shiftedPSDuv<-function(AFMImage) {
   nMheighData= matrix(AFMImage@data$h, nrow=AFMImage@samplesperline)
-  shiftedFFT2Ddata = shiftFFT2D(fftw2d(nMheighData))
+  shiftedFFT2Ddata = shiftFFT2D(fftwtools::fftw2d(nMheighData))
   
   N=nrow(shiftedFFT2Ddata)
   M=ncol(shiftedFFT2Ddata)
@@ -739,7 +739,7 @@ setMethod(f="getNyquistSpatialFrequency", "AFMImage",
 #' 
 #' data(AFMImageOfNormallyDistributedHeights)
 #' paddedAFMImage<-getPaddedAFMImage(AFMImageOfNormallyDistributedHeights)
-#' displayIn3D(AFMImage= paddedAFMImage, width= 1024)
+#' displayIn3D(AFMImage= paddedAFMImage, width= 1024,noLight=TRUE)
 getPaddedAFMImage<-function(AFMImage) {
   paddedAFMImageMatrix<-matrix(AFMImage@data$h, nrow=AFMImage@samplesperline, ncol=AFMImage@lines,byrow = TRUE)
   N=nrow(paddedAFMImageMatrix)

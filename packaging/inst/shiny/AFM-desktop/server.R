@@ -11,7 +11,7 @@ library(fractaldim)
 library(stringr)
 library(grid)
 library(gridExtra)
-library(reshape2)
+#library(reshape2)
 library(gstat)
 
 
@@ -220,7 +220,7 @@ shinyServer(function(input, output, session) {
     if (input$displayIn3DFileButton==c(0)) return(NULL)
     #print(input$displayIn3DFileButton)
     if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@AFMImage))  return(NULL)
-    displayIn3D(v$AFMImageAnalyser@AFMImage, 1024)
+    displayIn3D(v$AFMImageAnalyser@AFMImage, 1024, noLight=FALSE)
     print("displayIn3DFileButton button pushed")
   })
   
@@ -1487,18 +1487,23 @@ shinyServer(function(input, output, session) {
       if (is.null(v$AFMImageAnalyser)) {
         return()
       }
-
-      newAFMImage<-v$AFMImageAnalyser@AFMImage
+      isolate({
+        input$checkFilterNetworksButton
+        newAFMImage<-v$AFMImageAnalyser@AFMImage
+        
+        heights<-newAFMImage@data$h*input$heightNetworksslider
+        heights<-heights+abs(min(heights))
+        
+        heights[heights<input$filterNetworksslider[1]]<-0
+        heights[heights>input$filterNetworksslider[2]]<-0
+        
+        newAFMImage@data$h<-heights
+        
+        getSpplotFromAFMImage(newAFMImage, expectedWidth=512, expectHeight= 512, withoutLegend=TRUE)
+        
+        displayIn3D(newAFMImage)
+      })
       
-      heights<-newAFMImage@data$h*input$heightNetworksslider
-      heights<-heights+abs(min(heights))
-      
-      heights[heights<input$filterNetworksslider[1]]<-0
-      heights[heights>input$filterNetworksslider[2]]<-0
-      
-      newAFMImage@data$h<-heights
-
-      getSpplotFromAFMImage(newAFMImage, expectedWidth=512, expectHeight= 512, withoutLegend=TRUE)
     }
   })
   
@@ -1579,7 +1584,7 @@ shinyServer(function(input, output, session) {
         
         newAFMImage<-copy(v$AFMImageAnalyser@AFMImage)
         #newAFMImage<-extractAFMImage(newAFMImage,0,0,80)
-
+        
         AFMImageNetworksAnalysis@heightNetworksslider=input$heightNetworksslider
         AFMImageNetworksAnalysis@filterNetworkssliderMin=input$filterNetworksslider[1]
         AFMImageNetworksAnalysis@filterNetworkssliderMax=input$filterNetworksslider[2]
@@ -1610,7 +1615,7 @@ shinyServer(function(input, output, session) {
           AFMImageNetworksAnalysis@updateProgress(message="Calculate shortest path", value=7/8)
           AFMImageNetworksAnalysis<-calculateShortestPaths(AFMImageNetworksAnalysis)
         }
-
+        
         print("calculation of networks done")
         v$AFMImageAnalyser@networksAnalysis<-AFMImageNetworksAnalysis
         print("done v$AFMImageAnalyser@networksAnalysis<-AFMImageNetworksAnalysis")

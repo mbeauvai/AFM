@@ -7,7 +7,7 @@
 #' @examples
 #' \dontrun{
 #' install.packages("AFM")
-#' AFM::runAFMapp()
+#' AFM::runAFMApp()
 #' }
 runAFMApp <- function() {
   appDir <- system.file("shiny", "AFM-desktop", package = "AFM")
