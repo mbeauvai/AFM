@@ -12,7 +12,7 @@ require("stringr")
 require(gridExtra)
 require(ggplot2)
 
-require(reshape2)
+#require(reshape2)
 
 # for reporting
 require(png)
@@ -159,7 +159,8 @@ generateCheckReport <- function(AFMImage) {
   reportDirectory<-paste(sampleDirectory, "outputs", sep="/")
   createReportDirectory(reportDirectory)
   
-  AFMImageAnalyser<-checkIsotropy(AFMImage)
+  AFMImageAnalyser<-new("AFMImageAnalyser", AFMImage= AFMImage, fullfilename = AFMImage@fullfilename)
+  AFMImageAnalyser<-checkIsotropy(AFMImage,AFMImageAnalyser)
   putAnalysisOnDisk(AFMImageAnalyser, AFMImage)
   
   #   sampleName<-basename(AFMImage@fullfilename)
@@ -225,7 +226,7 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
   
   # save all images necessary for the report on disk
   putImagesFromAnalysisOnDisk(AFMImageAnalyser, AFMImage, reportDirectory)
-
+  
   print(paste("creating", basename(reportFullfilename), "..."))
   pdf(reportFullfilename, width=8.27, height=11.69)
   
@@ -331,7 +332,7 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
       }
       #print(plotBestVariogramModelsTable)
     }
-
+    
     # best variogram models page
     if (!length(AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram)==0) {
       # chosen sample
@@ -359,11 +360,14 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
       grid.raster(chosenFitSampleImg,vp=vp2)
       #vp4<-viewport(layout.pos.row = 9, layout.pos.col = 2)
       #grid.text("Sample",  vp=vp4, gp=gpar(fontsize=10, col="black"))    
-
-      vp5<-viewport(layout.pos.row = 4:7, layout.pos.col = 1:2)
-      print(plotBestVariogramModelsTable,vp=vp5)
       
-      printVariogramModelEvaluations(AFMImageAnalyser, sampleDT, numberOfModelsPerPage)
+      totalVariogramModels=length(AFMImageAnalyser@variogramAnalysis@variogramModels)
+      #print(totalVariogramModels)
+      if (totalVariogramModels>0) {
+        vp5<-viewport(layout.pos.row = 4:7, layout.pos.col = 1:2)
+        print(plotBestVariogramModelsTable,vp=vp5)
+        printVariogramModelEvaluations(AFMImageAnalyser, sampleDT, numberOfModelsPerPage)
+      }
     }
     
     
@@ -470,7 +474,7 @@ generateAFMImageReport<-function(AFMImageAnalyser, reportFullfilename, isCheckRe
 #' @author M.Beauvais
 #' @export
 printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfModelsPerPage){
-  
+  error<-predicted<-realH<-nbPointsPercent<-numberOfPoints<-NULL
   #####################
   # new page for experimental variogram and models
   experimentalVariogramDT<-AFMImageAnalyser@variogramAnalysis@omnidirectionalVariogram
@@ -490,6 +494,7 @@ printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfMod
   
   
   allVarioModels<-str_sub(sampleDT$model,-3)
+  i<-1
   for (i in seq(1:length(allVarioModels))) {
     indexInPage<-i%%numberOfModelsPerPage
     
@@ -529,6 +534,38 @@ printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfMod
     withoutLegend<-TRUE
     colLimit<-length(cuts)+3
     cols <- getSpplotColors(colLimit) 
+    
+    
+    # density plot for percent error (over total amplitude)
+    amplitudeReal<-abs(max(AFMImageAnalyser@AFMImage@data$h)-min(AFMImageAnalyser@AFMImage@data$h))
+    
+    statsHeightsDT<-data.table(realH=AFMImageAnalyser@AFMImage@data$h, predicted = as.vector(unlist(part_valid_pr["var1.pred"]@data)))
+    
+    statsHeightsDT[,error:=(predicted-realH)/amplitudeReal,]
+    statsHeightsDT
+    resStatsDT<-data.table(step=c(0), numberOfPoints=c(0))
+    totalPoints<-length(statsHeightsDT$error)
+    for (i in seq(0,max(statsHeightsDT$error), by=(max(statsHeightsDT$error)/20))) {
+      nbPoints<-length(statsHeightsDT$error[abs(statsHeightsDT$error)<i])
+      resStatsDT<-rbind(resStatsDT, data.table(step=c(i), numberOfPoints=c(nbPoints)))
+    }
+    
+    resStatsDT<-resStatsDT[-c(1,2),]
+    resStatsDT
+    
+    resStatsDT[, nbPointsPercent:=numberOfPoints/totalPoints,]
+    resStatsDT
+    
+    
+    errorData<-data.frame(error=statsHeightsDT$error)
+    
+    
+    
+    
+    
+    
+    
+    
     
     predictedspplotfullfilename<-getSpplotPredictedImageFullfilename(tempdir(), sampleName, modelName)
     saveSpplotFromKrige(predictedspplotfullfilename, modelName, part_valid_pr,cuts, withoutLegend = TRUE)  
@@ -572,7 +609,7 @@ printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfMod
     myvgm$id=rep(factor("var1"),experimentalVariogramDTnrow)
     
     begin<-(indexInPage-1)*2+1
-    vp3<-viewport(layout.pos.row = begin:(begin+1), layout.pos.col = 1, width=200, height=200)
+    vp3<-viewport(layout.pos.row = begin:(begin+1), layout.pos.col = 1, width=100, height=100)
     vgLine <- rbind(
       cbind(variogramLine(vgm1, maxdist = max(myvgm$dist)), id = "Raw")
     )
@@ -583,6 +620,27 @@ printVariogramModelEvaluations<-function(AFMImageAnalyser, sampleDT, numberOfMod
     p1 <- p1 + guides(colour=FALSE)
     p1 <- p1 + expand_limits(y = 0)
     print(p1,vp=vp3)
+    
+    grid.newpage() 
+    vp5<-viewport(layout.pos.row = begin:(begin+2), layout.pos.col = 1, width=200, height=200)
+
+    p1<-ggplot(myvgm, aes(x = dist, y = gamma, colour = id)) +  geom_line(data = vgLine) + geom_point()   
+    p1 <- ggplot(errorData,aes(error, fill =c(1))) + geom_density(alpha = 0.2) +
+      guides(fill=FALSE)+ 
+      theme(legend.position="none")
+    
+    
+    # p1 + ylab("semivariance")
+    # p1 <- p1 + xlab("distance (nm)")
+    # p1 <- p1 + ggtitle("Semivariogram")
+    # p1 <- p1 + guides(colour=FALSE)
+    # p1 <- p1 + expand_limits(y = 0)
+    print(p1,vp=vp5)
+    
+    plotVariogramModelTable<-getGgplotFromDataTable(resStatsDT)
+    vp6<-viewport(layout.pos.row = (indexInPage-1)*2+1+1, layout.pos.col = 2:3)
+    print(vp=vp6, plotVariogramModelTable, row.names= FALSE, include.rownames=FALSE)
+    
     
   }
   
@@ -730,26 +788,27 @@ exportVariogramImagesForReport<- function(AFMImageAnalyser, AFMImage, exportDire
     # save images from variogram modeling
     totalVariogramModels=length(AFMImageAnalyser@variogramAnalysis@variogramModels)
     #print(totalVariogramModels)
-    fullfilename<-AFMImage@fullfilename
-    cuts<-AFMImageAnalyser@variogramAnalysis@cuts
-    for (i in seq(1,totalVariogramModels)) {
-      #print(AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@res)
-      testedModel<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@model
-      print(testedModel)
-      if (testedModel=="Wav2") { 
-        vgm<-vgm( 5, "Exp", 1, add.to = vgm(5, "Wav", 1, nugget = 2.5))
-      }else{
-        vgm<-vgm(5,testedModel,1,0)
+    if (totalVariogramModels>0) {
+      fullfilename<-AFMImage@fullfilename
+      cuts<-AFMImageAnalyser@variogramAnalysis@cuts
+      for (i in seq(1,totalVariogramModels)) {
+        #print(AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@res)
+        testedModel<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@model
+        print(testedModel)
+        if (testedModel=="Wav2") { 
+          vgm<-vgm( 5, "Exp", 1, add.to = vgm(5, "Wav", 1, nugget = 2.5))
+        }else{
+          vgm<-vgm(5,testedModel,1,0)
+        }
+        mykrige<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@mykrige
+        
+        predictedspplotfullfilename<-getSpplotPredictedImageFullfilename(exportDirectory, sampleName, testedModel)
+        saveSpplotFromKrige(predictedspplotfullfilename, vgm,mykrige,cuts, withoutLegend = TRUE)  
+        predictedAFMImage<-getAFMImageFromKrige(AFMImage, vgm, mykrige)
+        class(predictedAFMImage) = c("AFMImage")
+        #displayIn3D(predictedAFMImage,1024, full2Dfilename,noLight=TRUE))
+        export3DImageForReport(predictedAFMImage, exportDirectory)
       }
-      mykrige<-AFMImageAnalyser@variogramAnalysis@variogramModels[[i]]@mykrige
-      
-      predictedspplotfullfilename<-getSpplotPredictedImageFullfilename(exportDirectory, sampleName, testedModel)
-      saveSpplotFromKrige(predictedspplotfullfilename, vgm,mykrige,cuts, withoutLegend = TRUE)  
-      predictedAFMImage<-getAFMImageFromKrige(AFMImage, vgm, mykrige)
-      class(predictedAFMImage) = c("AFMImage")
-      #displayIn3D(predictedAFMImage,1024, full2Dfilename)
-      export3DImageForReport(predictedAFMImage, exportDirectory)
-      
     }
   }
   
@@ -771,12 +830,26 @@ exportPSDImagesForReport<-function(AFMImageAnalyser, AFMImage, exportDirectory) 
     p1 <- p1 + ylab("roughness (nm)")
     p1 <- p1 + xlab("lengthscale (nm)")
     p1 <- p1 + guides(colour=FALSE)  
+    
+    aIntercept<-AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@yintersept
+    aSlope<-AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@slope
+    
+    if (length(AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2)!=0){
+      p1 <- p1 + geom_abline(intercept = aIntercept,
+                             slope = aSlope,
+                             size=1.2)  
+    }
+    print(paste(aIntercept, aSlope))
+
     pngFilename=paste(filename,"roughness-against-lengthscale.png",sep="-")
     exportpngFullFilename<-paste(exportDirectory, pngFilename, sep="/")
     print(paste("saving", basename(exportpngFullFilename)))
     png(filename=exportpngFullFilename, units = "px", width=800, height=800)
     print(p1)
     dev.off()
+    
+    
+    
     
     # focus on the first 10nm
     newdata<-data[r<10,]
@@ -787,6 +860,11 @@ exportPSDImagesForReport<-function(AFMImageAnalyser, AFMImage, exportDirectory) 
     p1 <- p1 + ylab("roughness (nm)")
     p1 <- p1 + xlab("lengthscale (nm)")
     p1 <- p1 + guides(colour=FALSE)
+    # if (length(AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1)!=0){
+    #   p1 <- p1 + geom_abline(intercept = AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1@yintersept,
+    #                          slope = AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1@slope,
+    #                          size=1.2)  
+    # }
     pngFilename=paste(filename,"roughness-against-lengthscale-10nm.png",sep="-")
     exportpngFullFilename<-paste(exportDirectory, pngFilename, sep="/")
     print(paste("saving", basename(exportpngFullFilename)))
@@ -801,10 +879,52 @@ exportPSDImagesForReport<-function(AFMImageAnalyser, AFMImage, exportDirectory) 
   }
 }
 
+getGgplotFromDataTable<-function(DT, removeRowNames, removeColNames) {
+  if (missing(removeRowNames)) removeRowNames<-TRUE
+  if (missing(removeColNames)) removeColNames<-FALSE
+  
+  mytheme <- gridExtra::ttheme_default(
+    core = list(fg_params=list(cex = 0.8)),
+    colhead = list(fg_params=list(cex = 0.9)),
+    rowhead = list(fg_params=list(cex = 0.9)))
+  
+  qplotFromDataTable<- qplot(1:15, 1:15, geom = "blank") + 
+    theme_bw() +
+    theme(line = element_blank(), text = element_blank())
+  if ((removeRowNames)&&(removeColNames)) {
+    qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, rows = NULL, cols=NULL))
+  }else{
+    if (removeRowNames) {
+      qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, rows = NULL))
+    }else{
+      if (removeColNames) {
+        qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme, cols = NULL))
+      }else{
+        qplotFromDataTable<- qplotFromDataTable + annotation_custom(grob = tableGrob(DT,  theme = mytheme))
+      }
+    }
+  }
+  
+  return(qplotFromDataTable)
+}
+
+export3DImageForReport<-function(AFMImage, exportDirectory, noLight) {
+  library(AFM)
+  library(rgl)
+  sampleName<-basename(AFMImage@fullfilename)
+  rglImagefullfilename<-get3DImageFullfilename(exportDirectory, sampleName)
+  
+  if (displayIn3D(AFMImage, width=1024, fullfilename=rglImagefullfilename,changeViewpoint=TRUE, noLight= noLight)) {
+    rgl.viewpoint(zoom=2)
+    rgl.close()
+  }
+}
+
+
 export3DImageForReport<-function(AFMImage, exportDirectory) {
   sampleName<-basename(AFMImage@fullfilename)
   rglImagefullfilename<-get3DImageFullfilename(exportDirectory, sampleName)
-  if (displayIn3D(AFMImage, 1024, rglImagefullfilename)) {
+  if (displayIn3D(AFMImage, width=1024, fullfilename=rglImagefullfilename,noLight=FALSE)) {
     rgl.close()
   }
 }

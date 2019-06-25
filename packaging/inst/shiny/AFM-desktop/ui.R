@@ -1,6 +1,6 @@
 library(shiny)
 library(shinyjs)
-library(rglwidget)
+library(rgl)
 
 shinyUI(
   navbarPage('AFM Image Analysis',
@@ -23,7 +23,32 @@ shinyUI(
                                 # ,tags$script(src="AFM.js")
                               )
                             )),
-                   tabPanel('PSD',
+             tabPanel('Gaussian Mixtures',
+                      sidebarLayout(
+                        sidebarPanel(
+                          uiOutput('imageNameGaussianMix'),
+                          tags$hr(),
+                          numericInput("mepsilonGaussianMix", "Convergence criterion:", 1e-4, min = 1e-20, max = 1e-2),
+                          sliderInput("minmaxGaussianMix", label = h5("Number of components"), min = 2, max = 8, step = 1,
+                                      value = c(2, 3)),
+                          tags$hr(),
+                          actionButton('calculateGaussianMixButton',label='Calculate')
+                        )
+                        ,
+                        mainPanel(
+     
+                            tabPanel("Plot",
+                                     fluidRow(
+                                       uiOutput('plotGaussianMixUI'),
+                                       plotOutput("plotGaussianMixPlot"),
+                                       uiOutput('summaryGaussianMixUI'),
+                                       verbatimTextOutput("gaussianMixSummary"))
+                            )
+                          
+                        )
+                      )),
+             navbarMenu('PSD',
+                            tabPanel('Calculation',
                             sidebarLayout(
                               sidebarPanel(
                                 uiOutput('imageNamePSD'),
@@ -38,10 +63,32 @@ shinyUI(
                               ,
                               mainPanel(
                                 uiOutput('plotPSDUI'),
-                                plotOutput('plotPSD'),
+                                plotOutput('plotPSD')
+                                ,
                                 uiOutput('plotPSDRvsLUI'),
                                 plotOutput('plotPSDRvsL')
                               )
+                            )),
+                            tabPanel('Analysis',
+                                     sidebarLayout(
+                                       sidebarPanel(
+                                         uiOutput('imageNameAnalysisPSD'),
+                                         tags$hr(),
+                                         sliderInput('firstSlopeSliderPSD', label = 'First tangent',
+                                                     min = 1, max = 124, value = c(1,32), step=1, ticks=FALSE),
+                                         
+                                         sliderInput('lcSliderPSD', label = 'Lc tangent',
+                                                     min = 1, max = 124, value = c(10,70), step=1, ticks=FALSE),
+                                         actionButton('RoughnessByLengthScaleAnalysisButton', label = 'Calculate'),
+                                         tags$hr(),
+                                         uiOutput('downloadRoughnessVsLengthscaleAnalysisPSDButton')
+                                       )
+                                       ,
+                                       mainPanel(
+                                         uiOutput('plotAnalysisPSDRvsLUI'),
+                                         plotOutput('plotAnalysisPSDRvsL')
+                                       )
+                                     )
                             )),
                    
                    navbarMenu('Variance',
@@ -101,26 +148,27 @@ shinyUI(
                                 imageOutput('fractalDimensionsFractalPlots_fd2d_filter1')
                               )
                             )),
-#              tabPanel('Networks',
-#                       sidebarLayout(
-#                         sidebarPanel(
-#                           uiOutput('imageNameNetworks'),
-#                           registerSceneChange(),
-#                           tags$hr(),
-#                           sliderInput('heightNetworksslider', label = 'Height multiplier',
-#                                       min = 0.1, max = 10, value = 1, step=0.1),
-#                           sliderInput('filterNetworksslider', label = 'Filter',
-#                                       min = 0.1, max = 10, value = c(1,10), step=0.1),
-#                           actionButton('checkFilterNetworksButton', label = 'Check filter'),
-#                           actionButton('calculateNetworksNetworksButton', label = 'Calculate networks')
-#                         ),
-#                         mainPanel(
-#                           uiOutput('panelNetworksUI'),
-#                           plotOutput("distNetworksPlot"),
-#                           plotOutput("newImageNetworksPlot"),
-#                           plotOutput("skeletonImageNetworksPlot")
-#                         )
-#                       )),
+             tabPanel('Networks',
+                      sidebarLayout(
+                        sidebarPanel(
+                          uiOutput('imageNameNetworks'),
+                          registerSceneChange(),
+                          tags$hr(),
+                          sliderInput('heightNetworksslider', label = 'Height multiplier',
+                                      min = 0.1, max = 10, value = 1, step=0.1),
+                          sliderInput('filterNetworksslider', label = 'Filter',
+                                      min = 0.1, max = 10, value = c(1,10), step=0.1),
+                          actionButton('checkFilterNetworksButton', label = 'Check filter'),
+                          uiOutput('smallBranchesNetworksNetworksCheckboxInput'),
+                          actionButton('calculateNetworksNetworksButton', label = 'Calculate networks')
+                        ),
+                        mainPanel(
+                          uiOutput('panelNetworksUI'),
+                          plotOutput("skeletonImageNetworksPlot"),
+                          plotOutput("newImageNetworksPlot"),
+                          plotOutput("distNetworksPlot")
+                         )
+                       )),
                    tabPanel('3D',
                             sidebarLayout(
                               sidebarPanel(
@@ -157,7 +205,7 @@ shinyUI(
                             mainPanel(
                               tags$iframe(
                                 seamless="seamless",
-                                src="http://www.openbmap.com/AFM/index_afmapp.html",style="width: 400px; height: 400px")
+                                src="http://www.afmist.org/index_afmapp.html",style="width: 400px; height: 400px")
                             )
                    ),
              tags$head(tags$script(src="google-analytics.js")),

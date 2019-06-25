@@ -10,7 +10,7 @@ require("stringr")
 
 require(fractaldim)
 
-require(reshape2)
+#require(reshape2)
 
 
 #' @title AFM image fractal dimension method class
@@ -125,7 +125,7 @@ setReplaceMethod(f="fractalDimensionMethods",
 
 #' Calculate 2D fractal dimensions and scales of an AFM Image
 #'
-#' \code{getFractalDimensions} calculates fractal dimensions and scales of an \code{\link{AFMImage}} with \code{\link[fractaldim]{fd.estim.method}} from the \code{\link{fractaldim}} package.
+#' \code{getFractalDimensions} calculates fractal dimensions and scales of an \code{\link{AFMImage}} with the fd.estim.method from the \code{\link{fractaldim}} package.
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
 #' @param AFMImageFractalDimensionsAnalysis an \code{\link{AFMImageFractalDimensionsAnalysis}} to store the results of the fractal analysis
 #' @return a list of \code{\link{AFMImageFractalDimensionMethod}} objects with the calculated fractal dimensions and scales

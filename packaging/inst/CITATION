@@ -1,0 +1,32 @@
+year <- 2019
+vers <- paste("R package version 1.2.6")
+
+bibentry(bibtype = "Manual",
+         title = "{AFM}: Atomic Force Microscopy Image Analysis",
+         author = c(person("M.", "Beauvais"),
+                    person("I.", "Liascukiene"),
+                    person("J.", "Landoulsi")),
+         year = year,
+         note=vers,
+         textVersion = paste0("M. Beauvais, I. Liascukiene, J. Landoulsi (2019). AFM: Atomic Force Microscopy Image Analysis. ",vers))
+
+
+bibentry(bibtype = "Article",
+         editor="Wiley",
+         journal="Advanced Materials Interfaces",
+         doi="10.1002/admi.201900195",
+         title = "Supramolecular Self-Assembly and Organization of Collagen at Solid/Liquid Interface: Effect of Spheroid- and Rod-Shaped TiO 2 Nanocrystals",
+         author = c(person("M.", "Beauvais"),
+                    person("T.", "Degabriel"),
+                    person("N.", "Aissaoui"),
+                    person("V.", "Dupres"),
+                    person("E.", "Colaço"),
+                    person("K.", "El Kirat"),
+                    person("R. F.", "Domingos"),
+                    person("D.", "Brouri"),
+                    person("C.-M.", "Pradier"),
+                    person("J.", "Spadavecchia"),
+                    person("J.", "Landoulsi")),
+         year = 2019,
+         textVersion = paste0("Wiley - Advanced Materials Interfaces - https://doi.org/10.1002/admi.201900195 - Supramolecular Self-Assembly and Organization of Collagen at Solid/Liquid Interface: Effect of Spheroid- and Rod-Shaped TiO 2 Nanocrystals (05/2019) - M. Beauvais and T. Degabriel and N. Aissaoui and V. Dupres and E. Colaço and K. El Kirat and R. F. Domingos and D. Brouri and C. M. Pradier and J. Spadavecchia and J. Landoulsi"))
+         

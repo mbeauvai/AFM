@@ -1,7 +1,6 @@
 require(shiny)
 library(AFM)
 library(rgl)
-library(rglwidget)
 library(tools)
 library(data.table)
 library(xtable)
@@ -12,11 +11,12 @@ library(fractaldim)
 library(stringr)
 library(grid)
 library(gridExtra)
-library(reshape2)
+#library(reshape2)
 library(gstat)
-
+library(parallel)
 
 data("AFMImageOfAluminiumInterface")
+data("AFMImageCollagenNetwork")
 data("AFMImageOfNormallyDistributedHeights")
 data("AFMImageOfOnePeak")
 data("AFMImageOfRegularPeaks")
@@ -28,27 +28,38 @@ options(shiny.maxRequestSize = 900*1024^2)
 
 #HEADLESS<-TRUE
 HEADLESS<-FALSE
+AFMImageOfNormallyDistributedHeights@data$h<-AFMImageOfNormallyDistributedHeights@data$h-mean(AFMImageOfNormallyDistributedHeights@data$h)
+AFMImageOfOnePeak@data$h<-AFMImageOfOnePeak@data$h-mean(AFMImageOfOnePeak@data$h)
+AFMImageOfRegularPeaks@data$h<-AFMImageOfRegularPeaks@data$h-mean(AFMImageOfRegularPeaks@data$h)
+
+
+#AFMImageCollagenNetwork<-extractAFMImage(AFMImageCollagenNetwork,30,15,96)
+
 
 testHEADLESS<-function() {
   
-  result = tryCatch({
-    open3d()
-  }, warning = function(w) {
-    print("warning rgl.open()")
-    HEADLESS<-TRUE
-  }, error = function(e) {
-    print("error rgl.open()")
-    HEADLESS<-TRUE
-  }, finally = {
-    if (!HEADLESS) rgl.close()
-    print("finally rgl.open()")
-  })
+  # result = tryCatch({
+  #   open3d()
+  # }, warning = function(w) {
+  #   print("warning rgl.open()")
+  #   HEADLESS<-TRUE
+  # }, error = function(e) {
+  #   print("error rgl.open()")
+  #   HEADLESS<-TRUE
+  # }, finally = {
+  #   if (!HEADLESS) rgl.close()
+  #   print("finally rgl.open()")
+  # })
+  HEADLESS<-TRUE
+  if (interactive()) HEADLESS<-FALSE
   
 }
 
-testHEADLESS()
+#testHEADLESS()
 #HEADLESS<-TRUE
 print(paste("HEADLESS is", HEADLESS))
+print(paste("interactive() is", interactive()))
+
 #Do not open rgl windows with headless shiny server
 if (HEADLESS) {
   options(rgl.useNULL = TRUE)
@@ -64,7 +75,7 @@ if (HEADLESS) {
 }
 
 
-afm_data_sets<-c("AFMImageOfAluminiumInterface","AFMImageOfNormallyDistributedHeights","AFMImageOfOnePeak","AFMImageOfRegularPeaks")
+afm_data_sets<-c("AFMImageOfAluminiumInterface","AFMImageCollagenNetwork","AFMImageOfNormallyDistributedHeights","AFMImageOfOnePeak","AFMImageOfRegularPeaks")
 
 BrowserCanvasPixelLimit<-128
 
@@ -106,7 +117,9 @@ shinyServer(function(input, output, session) {
   
   disableButtons<-function() {
     shinyjs::disable("saveRdataFileButton")
+    shinyjs::disable("calculateGaussianMixButton")
     shinyjs::disable("RoughnessByLengthScaleButton")
+    shinyjs::disable("downloadGaussianMixButton")
     shinyjs::disable("downloadPSDPSDButton")
     shinyjs::disable("downloadRoughnessVsLengthscalePSDButton")
     shinyjs::disable("checkNormalityIsotropyCheckButton")
@@ -124,7 +137,10 @@ shinyServer(function(input, output, session) {
   
   enableButtons<-function() {
     shinyjs::enable("saveRdataFileButton")
+    shinyjs::enable("calculateGaussianMixButton")
     shinyjs::enable("RoughnessByLengthScaleButton")
+    shinyjs::enable("downloadGaussianMixButton")
+    shinyjs::enable("downloadMixButton")
     shinyjs::enable("downloadPSDPSDButton")
     shinyjs::enable("downloadRoughnessVsLengthscalePSDButton")
     shinyjs::enable("checkNormalityIsotropyCheckButton")
@@ -132,7 +148,7 @@ shinyServer(function(input, output, session) {
     shinyjs::enable("calculateFractalDimensionsButton")
     shinyjs::enable("calculateNetworksNetworksButton")
     
-    if (!HEADLESS) shinyjs::enable("displayIn3D3DButton")
+    shinyjs::enable("displayIn3D3DButton")
     if (!HEADLESS) shinyjs::enable("snapshot3DButton")
     shinyjs::enable("calculate3DModel3DButton")
     #shinyjs::enable("export3DModel3DButton")
@@ -185,6 +201,12 @@ shinyServer(function(input, output, session) {
         print(v$AFMImageAnalyser@fullfilename)
         #v$localfullfilename<-v$AFMImageAnalyser@fullfilename
         #v$AFMImageAnalyser@AFMImage<-v$AFMImageAnalyser@AFMImage
+        if (!is.null(v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1)) {
+          updateSliderInput(session, "firstSlopeSliderPSD", value = c(v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1@tangente_point1,
+                                                                      v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1@tangente_point2))
+          updateSliderInput(session, "lcSliderPSD", value = c(v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@tangente_point1,
+                                                              v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@tangente_point2))
+        }
       })
       rm(x)
     }
@@ -217,7 +239,7 @@ shinyServer(function(input, output, session) {
     if (input$displayIn3DFileButton==c(0)) return(NULL)
     #print(input$displayIn3DFileButton)
     if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@AFMImage))  return(NULL)
-    displayIn3D(v$AFMImageAnalyser@AFMImage, 1024)
+    displayIn3D(v$AFMImageAnalyser@AFMImage, 1024, noLight=FALSE)
     print("displayIn3DFileButton button pushed")
   })
   
@@ -227,12 +249,101 @@ shinyServer(function(input, output, session) {
       if(!is.null(v$AFMImageAnalyser)) {
         print("Exporting calculation")
         AFMImageAnalyser=copy(v$AFMImageAnalyser)
-        save(AFMImageAnalyser, file= file)      
+        save(AFMImageAnalyser, file= file)     
         print("done")
       }
     }
   )
   
+  #
+  # Gaussian Mix tab observer
+  #
+  # output$calculateGaussianMixButton <- renderUI({
+  #   # If missing input, return to avoid error later in function
+  #   #    if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@mixAnalysis))
+  #   #      return(NULL)
+  #   downloadButton('calculateGaussianMix',label='Calculate Gaussian Mix')
+  # })
+  # 
+  # output$calculateGaussianMix <- downloadHandler(
+  #   filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '.csv', sep='') },
+  #   content = function(file) {
+  #     write.csv(v$AFMImageAnalyser@psdAnalysis@psd1d, file, row.names = FALSE)
+  #   }
+  # )
+  
+  
+  observeEvent(input$calculateGaussianMixButton, {
+    input$calculateGaussianMixButton
+    print("calculateGaussianMixButton button pushed")
+    if (is.null(input$calculateGaussianMixButton)) {
+      print("input$calculateGaussianMixButton==NULL")
+      return(NULL)
+    }
+    print("input$calculateGaussianMixButton!=NULL")
+    if(input$calculateGaussianMixButton == c(0))
+    {
+      print("input$calculateGaussianMixButton==0")
+      return()
+    }else{
+      isolate({
+        input$calculateGaussianMixButton
+        
+        # Create a Progress object
+        progressGaussianMix <- shiny::Progress$new()
+        
+        # Close the progress when this reactive exits (even if there's an error)
+        on.exit(progressGaussianMix$close())
+        
+        print("calculation of Gaussian Mix")
+        
+        #createAFMImageAnalyser()
+        mepsilon=input$mepsilonGaussianMix
+        min=input$minmaxGaussianMix[1]
+        max=input$minmaxGaussianMix[2]
+        print(mepsilon)
+        print(min)
+        print(max)
+        
+        gaussianMixAnalysis<-AFMImageGaussianMixAnalysis()
+        gaussianMixAnalysis@minGaussianMix<-min
+        gaussianMixAnalysis@maxGaussianMix<-max
+        gaussianMixAnalysis@epsilonGaussianMix<-mepsilon
+        
+        # Create a closure to update progress
+        gaussianMixAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
+          if (exists("progressGaussianMix")){
+            if (!is.null(message)) {
+              progressGaussianMix$set(message = message, value = 0)
+            }else{
+              progressGaussianMix$set(value = value, detail = detail)
+            }
+          }
+        }
+        gaussianMixAnalysis<-performGaussianMixCalculation(AFMImageGaussianMixAnalysis= gaussianMixAnalysis, AFMImage= v$AFMImageAnalyser@AFMImage)
+        print("done gaussianMixAnalysis")
+        
+        v$AFMImageAnalyser@gaussianMixAnalysis<-gaussianMixAnalysis
+        print("done v$AFMImageAnalyser@gaussianMixAnalysis<-gaussianMixAnalysis")
+      })
+    }
+    
+    
+  })
+  
+  output$downloadGaussianMixButton <- renderUI({
+    # If missing input, return to avoid error later in function
+    #if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@mixAnalysis))
+    #  return(NULL)
+    downloadButton('exportGaussianMix',label='Export Gaussian Mix')
+  })
+  
+  output$exportGaussianMix <- downloadHandler(
+    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '.csv', sep='') },
+    content = function(file) {
+      write.csv(v$AFMImageAnalyser@gaussianMixAnalysis, file, row.names = FALSE)
+    }
+  )   
   #
   # PSD tab observer
   #
@@ -261,6 +372,21 @@ shinyServer(function(input, output, session) {
     filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '.csv', sep='') },
     content = function(file) {
       write.csv(v$AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale, file, row.names = FALSE)
+    }
+  )
+  
+  output$downloadRoughnessVsLengthscaleAnalysisPSDButton <- renderUI({
+    # If missing input, return to avoid error later in function
+    if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@psdAnalysis))
+      return(NULL)
+    downloadButton('exportRoughnessVsLengthscaleTangent',label='Export PSD analysis')
+  })
+  output$exportRoughnessVsLengthscaleTangent <- downloadHandler(
+    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '-AFMImageAnalyser','.Rda', sep='') },
+    content = function(aFilename) {
+      print("to be done")
+      AFMImageAnalyser<-copy(v$AFMImageAnalyser)
+      save(AFMImageAnalyser, file=aFilename)
     }
   )
   
@@ -294,10 +420,12 @@ shinyServer(function(input, output, session) {
         psdAnalysis<-AFMImagePSDAnalysis()
         # Create a closure to update progress
         psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
-          if (!is.null(message)) {
-            progressPSD$set(message = message, value = 0)
-          }else{
-            progressPSD$set(value = value, detail = detail)
+          if (exists("progressPSD")){
+            if (!is.null(message)) {
+              progressPSD$set(message = message, value = 0)
+            }else{
+              progressPSD$set(value = value, detail = detail)
+            }
           }
         }
         psdAnalysis@psd1d_breaks<-2^input$breaksSliderPSD
@@ -312,6 +440,149 @@ shinyServer(function(input, output, session) {
     
     
   })
+  
+  
+  observeEvent(input$RoughnessByLengthScaleButton, {
+    input$RoughnessByLengthScaleButton
+    print("RoughnessByLengthScaleButton button pushed")
+    if (is.null(input$RoughnessByLengthScaleButton)) {
+      print("input$RoughnessByLengthScaleButton==NULL")
+      return(NULL)
+    }
+    print("input$RoughnessByLengthScaleButton!=NULL")
+    if(input$RoughnessByLengthScaleButton == c(0))
+    {
+      print("input$RoughnessByLengthScaleButton==0")
+      return()
+    }else{
+      isolate({
+        input$RoughnessByLengthScaleButton
+        
+        # Create a Progress object
+        progressPSD <- shiny::Progress$new()
+        #progressPSD$set(message = "Calculting", value = 0)
+        # Close the progress when this reactive exits (even if there's an error)
+        on.exit(progressPSD$close())
+        
+        print("calculation of tangents PSD")
+        #print(paste("with", 2^input$breaksSliderPSD, "breaks"))
+        
+        #createAFMImageAnalyser()
+        psdAnalysis<-AFMImagePSDAnalysis()
+        # Create a closure to update progress
+        psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
+          if (exists("progressPSD")){
+            if (!is.null(message)) {
+              progressPSD$set(message = message, value = 0)
+            }else{
+              progressPSD$set(value = value, detail = detail)
+            }
+          }
+        }
+        
+        psdAnalysis@psd1d_breaks<-2^input$breaksSliderPSD
+        psdAnalysis@psd2d_truncHighLengthScale<-TRUE
+        psdAnalysis<-performAllPSDCalculation(AFMImagePSDAnalysis= psdAnalysis, AFMImage= v$AFMImageAnalyser@AFMImage)
+        
+        tryCatch({
+          intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(AFMImageAnalyser, second_slope= FALSE)
+          psdAnalysis@AFMImagePSDSlopesAnalysis1<-intersection
+          intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(AFMImageAnalyser, second_slope= TRUE)
+          psdAnalysis@AFMImagePSDSlopesAnalysis2<-intersection
+          
+          # AFMImageAnalyser@psdAnalysis<-psdAnalysis
+          # save(AFMImageAnalyser, file=paste0(dirOutput, sampleName,"-AFMImageAnalyser.Rdata"))  
+          
+        }, error = function(e) {print(paste("Impossible to find PSD intersections automaticaly",e))})
+        
+        print("done psdAnalysis")
+        
+        v$AFMImageAnalyser@psdAnalysis<-psdAnalysis
+        
+        
+        print("done v$AFMImageAnalyser@psdAnalysis<-psdAnalysis")
+      })
+    }
+    
+    
+  })
+  
+  observeEvent(input$RoughnessByLengthScaleAnalysisButton, {
+    input$RoughnessByLengthScaleAnalysisButton
+    print("RoughnessByLengthScaleAnalysisButton button pushed")
+    if (is.null(input$RoughnessByLengthScaleAnalysisButton)) {
+      print("input$RoughnessByLengthScaleAnalysisButton==NULL")
+      return(NULL)
+    }
+    print("input$RoughnessByLengthScaleAnalysisButton!=NULL")
+    if(input$RoughnessByLengthScaleAnalysisButton == c(0))
+    {
+      print("input$RoughnessByLengthScaleAnalysisButton==0")
+      return()
+    }else{
+      isolate({
+        input$RoughnessByLengthScaleAnalysisButton
+        
+        # Create a Progress object
+        progressPSD <- shiny::Progress$new()
+        #progressPSD$set(message = "Calculting", value = 0)
+        # Close the progress when this reactive exits (even if there's an error)
+        on.exit(progressPSD$close())
+        
+        print("calculation of tangents PSD")
+        #print(paste("with", 2^input$breaksSliderPSD, "breaks"))
+        
+        #createAFMImageAnalyser()
+        psdAnalysis<-AFMImagePSDAnalysis()
+        # Create a closure to update progress
+        psdAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
+          if (exists("progressPSD")){
+            if (!is.null(message)) {
+              progressPSD$set(message = message, value = 0)
+            }else{
+              progressPSD$set(value = value, detail = detail)
+            }
+          }
+        }
+        
+        
+        tryCatch({
+          tryCatch({
+            # intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(AFMImageAnalyser, second_slope= FALSE)
+            # v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1<-intersection
+            # intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(AFMImageAnalyser, second_slope= TRUE)
+            # v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2<-intersection
+            
+            print("sliders")
+            print(input$firstSlopeSliderPSD)
+            print(input$lcSliderPSD)
+            
+            intersection <- getIntersectionForRoughnessAgainstLengthscale(v$AFMImageAnalyser,
+                                                                          minValue= input$firstSlopeSliderPSD[1],
+                                                                          maxValue= input$firstSlopeSliderPSD[2],
+                                                                          second_slope= FALSE)
+            v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis1<-intersection
+            intersection <- getIntersectionForRoughnessAgainstLengthscale(v$AFMImageAnalyser,
+                                                                          minValue= input$lcSliderPSD[1],
+                                                                          maxValue= input$lcSliderPSD[2],
+                                                                          second_slope= TRUE)
+            v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2<-intersection
+          }, error = function(e) {print(paste("Error in PSD intersections calculation",e))})          
+          
+        }, error = function(e) {print(paste("Impossible to find PSD intersections automaticaly",e))})
+        
+        print("done psdAnalysis")
+        
+        #v$AFMImageAnalyser@psdAnalysis<-psdAnalysis
+        
+        
+        print("done v$AFMImageAnalyser@psdAnalysis<-psdAnalysis")
+      })
+    }
+    
+    
+  })
+  
   
   #
   # Variance checks tab
@@ -725,6 +996,235 @@ shinyServer(function(input, output, session) {
   }
   
   #
+  # Gaussian Mix Tab display
+  #
+  output$imageNameGaussianMix<-renderUI({
+    imageName<-displayImageName()
+    
+    if (is.null(imageName)) {
+      output$imageNamePSD<-renderUI(HTML(c("<h4>please select image first</h4>")))
+      return(NULL)
+    }
+    
+    output$imageNameGaussianMix<-imageName
+    #print(imageName)
+  })
+  
+  output$plotGaussianMixUI<-renderUI({
+    myplotGaussianMixUI()
+  })
+  
+  myplotGaussianMixUI<-reactive({
+    if (is.null(v$AFMImageAnalyser)||
+        is.null(v$AFMImageAnalyser@gaussianMixAnalysis)) {
+      return(NULL)
+    }
+    h3("Mixtures")
+  })
+  
+  output$summaryGaussianMixUI<-renderUI({
+    mysummaryGaussianMixUI()
+  })
+  
+  mysummaryGaussianMixUI<-reactive({
+    if (is.null(v$AFMImageAnalyser)||
+        is.null(v$AFMImageAnalyser@gaussianMixAnalysis)) {
+      return(NULL)
+    }
+    h3("Summary")
+  })
+  
+  output$plotGaussianMixPlot <- renderPlot({
+    my_plotGaussianMixPlot()
+  })
+  
+  my_plotGaussianMixPlot <- reactive({
+    if (is.null(input$calculateGaussianMixButton)) {
+      print("input$calculateGaussianMixButton==NULL")
+      return(NULL)
+    }
+    print("input$calculateGaussianMixButton!=NULL")
+    
+    if (is.null(v$AFMImageAnalyser)) {
+      #print("gaussianMixSummary is.null(v$AFMImageAnalyser")
+      return(NULL)
+    }
+    
+    if (is.null(v$AFMImageAnalyser@gaussianMixAnalysis)) {
+      #print("gaussianMixSummary is.null(v$AFMImageAnalyser@gaussianMixAnalysis")
+      return(NULL)
+    }
+    
+    
+    if (length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix)==0) {
+      print("length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix)==0")
+      return(NULL)
+    }
+    if(input$calculateGaussianMixButton == c(0)) {
+      print("my_plotGaussianMixTable input$calculateGaussianMixButton==0")
+    }else{
+      
+      isolate({
+        if (is.null(v$AFMImageAnalyser)) {
+          print("is.null(v$AFMImageAnalyser)")
+        }else{ if (is.null(v$AFMImageAnalyser@gaussianMixAnalysis)) {
+          print("is.null(v$AFMImageAnalyser@gaussianMixAnalysis)")
+        }else{
+          
+          
+          heights<-v$AFMImageAnalyser@AFMImage@data$h
+          distinct.heights <- sort(unique(heights))
+          
+          
+          
+          totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix)
+          #totalNbOfMixtures<-4
+          
+          #count number a non element in list
+          
+          totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix)
+          totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix) - length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[sapply(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix, is.null)])
+          
+          print(totalNbOfMixtures)
+          grobList <- vector("list", (totalNbOfMixtures)*3)
+          listNb<-0          
+          for (mixtureNumberOfComponents in seq(2,length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix))) {
+            
+            #mixtureNumberOfComponents<-2
+            print(paste("mixtureNumberOfComponents= ",mixtureNumberOfComponents))
+            if (!is.null(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+              heights.k<-v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]]
+              
+              tcdfs <- pnormmix(distinct.heights,mixture=heights.k)
+              ecdfs <- ecdf(heights)(distinct.heights)
+              
+              TheExpDT<-data.table(tcdfs,ecdfs)
+              p1 <- ggplot(data=TheExpDT)
+              p1 <- p1 + geom_point(aes(tcdfs, ecdfs, colour = "blue"),data=TheExpDT, show.legend = FALSE)
+              p1 <- p1 + ylab("Empirical CDF")
+              p1 <- p1 + geom_abline(slope=1, intercept = 0)
+              p1 <- p1 + xlab("Theoretical CDF")
+              
+              listNb<-listNb+1
+              grobList[[listNb]] <- p1
+              
+              
+              densityCurves<-data.frame(x=density(heights)$x , y=density(heights)$y, style=rep("Kernel", length(density(heights)$y)))
+              
+              
+              x <- seq(min(density(heights)$x),max(density(heights)$x),length=1000)
+              
+              densityCurves2<-data.frame(x=x, y=dnormalmix(x,heights.k), style=rep("Mixture", length(dnormalmix(x,heights.k))))
+              allHeights<-rbind(densityCurves,densityCurves2)
+              
+              p2<-ggplot(allHeights, aes(x=x, y=y)) +
+                geom_line(alpha=0.8,size=1.2, aes(color=style)) 
+              p2 <- p2 + ylab("Density")
+              p2 <- p2 + xlab("Heights (nm)")
+              p2 <- p2 + theme(legend.title=element_blank())
+              p2
+              
+              listNb<-listNb+1
+              grobList[[listNb]] <- p2
+              
+              
+              allComponents<-data.table(heights=c(0),counts=c(0), component.number=c(0))
+              
+              for(component.number in seq(1, mixtureNumberOfComponents)) {
+                tlength=1000
+                x <- seq(min(density(heights)$x),max(density(heights)$x),length=tlength)
+                y   <- dnorm(x,mean=(heights.k$mu[component.number]), sd=heights.k$sigma[component.number])*length(heights)*heights.k$lambda[component.number]
+                allComponents<-rbind(allComponents, data.table(heights=x,counts=y, component.number=rep(component.number,tlength)))
+              }
+              allComponents<-allComponents[-1,]
+              
+              
+              p3 <- ggplot(data=allComponents)
+              p3 <- p3 + geom_point(data=allComponents, aes(heights, counts), size=1.05, color="#FF0000")
+              p3 <- p3 + geom_histogram(data= data.frame(heights=heights), aes(x=heights), binwidth=1, color="#000000", fill="#000080", alpha=0.4)
+              listNb<-listNb+1
+              grobList[[listNb]] <- p3
+            }
+          }
+          grid.arrange(grobs = grobList, ncol=3,widths = c(1,1,1))
+          
+          
+        }}
+      })
+    }
+    return(NULL)
+  })
+  
+  output$gaussianMixSummary <- renderPrint({
+    if (is.null(input$calculateGaussianMixButton)) {
+      print("input$calculateGaussianMixButton==NULL")
+      return(NULL)
+    }
+    #print("gaussianMixSummary input$calculateGaussianMixButton!=NULL")
+
+    if (is.null(v$AFMImageAnalyser)) {
+      #print("gaussianMixSummary is.null(v$AFMImageAnalyser")
+      return(NULL)
+    }
+
+    if (is.null(v$AFMImageAnalyser@gaussianMixAnalysis)) {
+      #print("gaussianMixSummary is.null(v$AFMImageAnalyser@gaussianMixAnalysis")
+      return(NULL)
+    }
+    
+    if (length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix)==0) {
+      #print("gaussianMixSummary length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix)==0")
+      return(NULL)
+    }
+    
+    if (is.null(v$AFMImageAnalyser)) {
+      print("gaussianMixSummary is.null(v$AFMImageAnalyser)")
+    }else{ if (is.null(v$AFMImageAnalyser@gaussianMixAnalysis)) {
+      print("gaussianMixSummary is.null(v$AFMImageAnalyser@gaussianMixAnalysis)")
+    }else{
+      
+      res=data.table(number_of_components=c(0),
+                     #component=c(0),
+                     mean=c(0),
+                     sd=c(0),
+                     lambda=c(0))
+      
+      
+      totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix)
+      #totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix) - length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[sapply(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix, is.null)]) + 1
+      
+      for (mixtureNumberOfComponents in seq(2,totalNbOfMixtures)) {
+        
+        
+        
+        if (!is.null(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+          mixture<-v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]]
+          
+          for(component.number in seq(1, mixtureNumberOfComponents)) {
+            if (length(mixture)>0) {
+              mean=mixture$mu[component.number]
+              sd=mixture$sigma[component.number]
+              lambda=mixture$lambda[component.number]
+              
+              res=rbind(res, data.table(number_of_components=mixtureNumberOfComponents,
+                                        #component=component.number,
+                                        mean=mean,
+                                        sd=sd,
+                                        lambda=lambda))
+            }
+          }
+        }
+      }
+      res<-res[-1,]
+      res<-res[order(number_of_components, mean)]
+      res
+    }
+    }
+    #summary(Muts)
+  })
+  
+  
+  #
   # PSD Tab display
   #
   output$imageNamePSD<-renderUI({
@@ -790,9 +1290,10 @@ shinyServer(function(input, output, session) {
       }else{ if (is.null(v$AFMImageAnalyser@psdAnalysis)) {
         print("is.null(v$AFMImageAnalyser@psdAnalysis)")
       }else{
-        p <- ggplot(data=v$AFMImageAnalyser@psdAnalysis@psd1d)
-        p <- p + geom_point(aes(freq, PSD, color=type),subset = .(type %in% c("PSD-2D")))
-        p <- p + geom_line(aes(freq, PSD, color=type),subset = .(type %in% c("PSD-1D")),size=1.1)
+        datap<-v$AFMImageAnalyser@psdAnalysis@psd1d
+        p <- ggplot(data=datap)
+        p <- p + geom_point(aes(freq, PSD, color=type),data=datap[datap$type %in% c("PSD-2D")])
+        p <- p + geom_line(aes(freq, PSD, color=type),data=datap[datap$type %in% c("PSD-1D")],size=1.1)
         p <- p + scale_x_log10()
         p <- p + scale_y_log10()
         p <- p + ylab("PSD (nm^4)")
@@ -848,6 +1349,102 @@ shinyServer(function(input, output, session) {
     })
     # }
     return(NULL)
+  })
+  
+  
+  
+  output$plotAnalysisPSDRvsLUI<-renderUI({
+    myplotAnalysisPSDRvsLUI()
+  })
+  
+  myplotAnalysisPSDRvsLUI<-reactive({
+    if (is.null(v$AFMImageAnalyser)||
+        is.null(v$AFMImageAnalyser@psdAnalysis)) {
+      return(NULL)
+    }
+    h3("Roughness vs. lengthscale")
+  })
+  
+  output$plotAnalysisPSDRvsL <- renderPlot({
+    my_RoughnessVsLengthscale_Analysisplot()
+  })
+  
+  my_RoughnessVsLengthscale_Analysisplot <- reactive({
+    if (is.null(input$RoughnessByLengthScaleAnalysisButton)) {
+      print("input$RoughnessByLengthScaleAnalysisButton==NULL")
+      return(NULL)
+    }
+    print("input$RoughnessByLengthScaleAnalysisButton!=NULL")
+    print(length(v$AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale))
+    if (length(v$AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale)==0) {
+      print("length(v$AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale)==0")
+      return(NULL)
+    }
+    
+    #     if(input$RoughnessByLengthScaleAnalysisButton == c(0))
+    #     {
+    #       print("my_RoughnessVsLengthscale_plot input$RoughnessByLengthScaleAnalysisButton==0")
+    #     }else{
+    isolate({
+      input$RoughnessByLengthScaleAnalysisButton
+      
+      if (is.null(v$AFMImageAnalyser)) {
+        print("is.null(v$AFMImageAnalyser)")
+      }else{ if (is.null(v$AFMImageAnalyser@psdAnalysis)) {
+        print("is.null(v$AFMImageAnalyser@psdAnalysis)")
+      }else{
+        print("Displaying Roughness vs. lengthscale with tangente")
+        
+        
+        
+        
+        r<-roughness<-filename<-NULL
+        #v$AFMImagePSDAnalysis@roughnessAgainstLengthscale$filename<-v$localfullfilename
+        p1 <- ggplot(v$AFMImageAnalyser@psdAnalysis@roughnessAgainstLengthscale, aes(x=r, y=roughness, colour= "red"))
+        p1 <- p1 + geom_point()
+        p1 <- p1 + geom_line()
+        p1 <- p1 + ylab("roughness (nm)")
+        p1 <- p1 + xlab("lengthscale (nm)")
+        p1 <- p1 + guides(color=FALSE)
+        p1 <- p1 + scale_color_discrete(NULL)
+        
+        if (length(v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2)!=0){
+          aIntercept<-v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@yintersept
+          aSlope<-v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@slope
+          
+          print(aIntercept)
+          print(aSlope)
+          print(v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@wsat)
+          p1 <- p1 + geom_abline(intercept = aIntercept,
+                                 slope = aSlope,
+                                 size=1.2, linetype = 1)  
+          p1 <- p1 + geom_vline(xintercept = v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@lc,  linetype = 2)
+          p1 <- p1 + geom_hline(yintercept = v$AFMImageAnalyser@psdAnalysis@AFMImagePSDSlopesAnalysis2@wsat, size=1.2,  linetype = 1)
+          
+          
+        }
+        
+        return(p1)
+      }}
+    })
+    # }
+    return(NULL)
+  })
+  
+  
+  
+  
+  
+  output$imageNameAnalysisPSD<-renderUI({
+    imageName<-displayImageName()
+    
+    if (is.null(imageName)) {
+      output$imageNamePSD<-renderUI(HTML(c("<h4>please select image first</h4>")))
+      return(NULL)
+    }
+    
+    output$imageNameAnalysisPSD<-imageName
+    #print(imageName)
   })
   
   
@@ -1433,6 +2030,16 @@ shinyServer(function(input, output, session) {
     #print(imageName)
   })
   
+  output$smallBranchesNetworksNetworksCheckboxInput<-renderUI({
+    imageName<-displayImageName()
+    
+    if (is.null(imageName)) {
+      output$imageNameNetworks<-renderUI(HTML(c("<h4>please select image first</h4>")))
+      return(NULL)
+    }
+    checkboxInput("smallBranchesNetworksNetworksCheckboxInput", "Small branches")
+  })
+  
   
   output$distNetworksPlot <- renderPlot({
     
@@ -1471,23 +2078,23 @@ shinyServer(function(input, output, session) {
       if (is.null(v$AFMImageAnalyser)) {
         return()
       }
+      isolate({
+        input$checkFilterNetworksButton
+        newAFMImage<-v$AFMImageAnalyser@AFMImage
+        
+        heights<-newAFMImage@data$h*input$heightNetworksslider
+        heights<-heights+abs(min(heights))
+        
+        heights[heights<input$filterNetworksslider[1]]<-0
+        heights[heights>input$filterNetworksslider[2]]<-0
+        
+        newAFMImage@data$h<-heights
+        
+        getSpplotFromAFMImage(newAFMImage, expectedWidth=512, expectHeight= 512, withoutLegend=TRUE)
+        
+        displayIn3D(newAFMImage)
+      })
       
-      
-      
-      newAFMImage<-v$AFMImageAnalyser@AFMImage
-      
-      heights<-newAFMImage@data$h*input$heightNetworksslider
-      heights<-heights+abs(min(heights))
-      
-      heights[heights<input$filterNetworksslider[1]]<-0
-      heights[heights>input$filterNetworksslider[2]]<-0
-      
-      newAFMImage@data$h<-heights
-      
-
-      
-      
-      getSpplotFromAFMImage(newAFMImage, expectedWidth=512, expectHeight= 512, withoutLegend=TRUE)
     }
   })
   
@@ -1495,14 +2102,14 @@ shinyServer(function(input, output, session) {
     if (is.null(v$AFMImageAnalyser)||
         is.null(v$AFMImageAnalyser@networksAnalysis)||
         is.null(v$AFMImageAnalyser@networksAnalysis@skeletonGraph)
-        ) {
+    ) {
       return()
     }
     library(igraph)
     nbVertices=length(V(v$AFMImageAnalyser@networksAnalysis@skeletonGraph))
     print(nbVertices)
-    gridIgraphPlot(AFMImage, v$AFMImageAnalyser@networksAnalysis@skeletonGraph)
-    
+    #gridIgraphPlot(AFMImage, v$AFMImageAnalyser@networksAnalysis@skeletonGraph)
+    displayColoredNetworkWithVerticesSize(v$AFMImageAnalyser@networksAnalysis)
   })
   
   
@@ -1531,9 +2138,12 @@ shinyServer(function(input, output, session) {
         print("calculation of Networks")
         
         #createAFMImageAnalyser()
-        networkAnalysis<-new ("AFMImageNetworksAnalysis")
+        AFMImageNetworksAnalysis = new("AFMImageNetworksAnalysis")
+        
+        
+        
         # Create a closure to update progress
-        networkAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
+        updateProgressNetworkAnalysis<- function(value = NULL, detail = NULL, message = NULL) {
           if (!is.null(message)) {
             progressCalculateNetworks$set(message = message, value = 0)
           }else{
@@ -1541,35 +2151,93 @@ shinyServer(function(input, output, session) {
           }
           return(TRUE)
         }
-        networkAnalysis@updateProgress(message="Calculating networks", value=0)
+        
+        AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
         
         
+        # newAFMImage<-copy(v$AFMImageAnalyser@AFMImage)
+        # 
+        # newAFMImage<-extractAFMImage(newAFMImage,0,0,184)
+        # 
+        # heights<-newAFMImage@data$h*input$heightNetworksslider
+        # heights<-heights+abs(min(heights))
+        # 
+        # heights[heights<input$filterNetworksslider[1]]<-0
+        # heights[heights>input$filterNetworksslider[2]]<-0
+        # 
+        # newAFMImage@data$h<-heights
+        # 
+        # 
+        # networkAnalysis@heightNetworksslider=input$heightNetworksslider
+        # networkAnalysis@filterNetworkssliderMin=input$filterNetworksslider[1]
+        # networkAnalysis@filterNetworkssliderMax=input$filterNetworksslider[2]
+        # 
+        # if(!is.null(v$AFMImageAnalyser@AFMImage)) {
+        #   print("Calculating networks")
+        #   networksAna<-calculateNetworks(AFMImageNetworksAnalysis= networkAnalysis, AFMImage= newAFMImage)
+        # }
         
         newAFMImage<-copy(v$AFMImageAnalyser@AFMImage)
+        #newAFMImage<-extractAFMImage(newAFMImage,0,0,80)
         
-        newAFMImage<-extractAFMImage(newAFMImage,0,0,184)
+        AFMImageNetworksAnalysis@heightNetworksslider=input$heightNetworksslider
+        AFMImageNetworksAnalysis@filterNetworkssliderMin=input$filterNetworksslider[1]
+        AFMImageNetworksAnalysis@filterNetworkssliderMax=input$filterNetworksslider[2]
+        AFMImageNetworksAnalysis@smallBranchesTreatment=TRUE
         
-        heights<-newAFMImage@data$h*input$heightNetworksslider
-        heights<-heights+abs(min(heights))
-        
-        heights[heights<input$filterNetworksslider[1]]<-0
-        heights[heights>input$filterNetworksslider[2]]<-0
-        
-        newAFMImage@data$h<-heights
+        AFMImageNetworksAnalysis@updateProgress(message="Transform image", value=0)
+        AFMImageNetworksAnalysis@updateProgress(value= 0, detail = "1/8")
         
         
-        networkAnalysis@heightNetworksslider=input$heightNetworksslider
-        networkAnalysis@filterNetworkssliderMin=input$filterNetworksslider[1]
-        networkAnalysis@filterNetworkssliderMax=input$filterNetworksslider[2]
+        AFMImageNetworksAnalysis<-transformAFMImageForNetworkAnalysis(AFMImageNetworksAnalysis, 
+                                                                      AFMImage= newAFMImage)
+        newAFMImage<-AFMImageNetworksAnalysis@binaryAFMImage
+        displayIn3D(newAFMImage, noLight=TRUE)
         
         if(!is.null(v$AFMImageAnalyser@AFMImage)) {
           print("Calculating networks")
-          networksAna<-calculateNetworks(AFMImageNetworksAnalysis= networkAnalysis, AFMImage= newAFMImage)
+          
+          AFMImageNetworksAnalysis@updateProgress(message="Identify nodes")
+          AFMImageNetworksAnalysis@updateProgress(value= 2, detail = "2/8")
+          
+          AFMImageNetworksAnalysis<-identifyNodesAndEdges(AFMImageNetworksAnalysis= AFMImageNetworksAnalysis, maxHeight= AFMImageNetworksAnalysis@filterNetworkssliderMax)
+          # Create a closure to update progress
+          AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
+          AFMImageNetworksAnalysis@updateProgress(message="Identify edges")
+          AFMImageNetworksAnalysis@updateProgress(value= 3, detail = "3/8")
+          
+          AFMImageNetworksAnalysis<-identifyEdgesFromCircles(AFMImageNetworksAnalysis= AFMImageNetworksAnalysis, MAX_DISTANCE = 75)
+          AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
+          AFMImageNetworksAnalysis@updateProgress(message="Identify isolated nodes", detail = "4/8")
+          AFMImageNetworksAnalysis@updateProgress(value= 4)
+          
+          AFMImageNetworksAnalysis<-identifyIsolatedNodes(AFMImageNetworksAnalysis)
+          AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
+          AFMImageNetworksAnalysis@updateProgress(message="Create networks", detail = "5/8")
+          AFMImageNetworksAnalysis@updateProgress(value= 5)
+          
+          AFMImageNetworksAnalysis<-createGraph(AFMImageNetworksAnalysis)
+          AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
+          AFMImageNetworksAnalysis@updateProgress(message="Calculate shortest path", detail = "6/8")
+          AFMImageNetworksAnalysis@updateProgress(value= 6)
+          
+          AFMImageNetworksAnalysis<-calculateShortestPaths(AFMImageNetworksAnalysis=AFMImageNetworksAnalysis)
+          AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
+          AFMImageNetworksAnalysis@shortestPaths
+          AFMImageNetworksAnalysis@updateProgress(message="Calculate network parameters and holes characteristics", detail = "7/8")
+          AFMImageNetworksAnalysis@updateProgress(value= 7)
+
+          AFMImageNetworksAnalysis<-calculateNetworkParameters(AFMImageNetworksAnalysis=AFMImageNetworksAnalysis, AFMImage=v$AFMImageAnalyser@AFMImage)
+          AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
+          AFMImageNetworksAnalysis@networksCharacteristics
+          AFMImageNetworksAnalysis@graphEvcent
+          AFMImageNetworksAnalysis@graphBetweenness
+          AFMImageNetworksAnalysis<-calculateHolesCharacteristics(AFMImageNetworksAnalysis=AFMImageNetworksAnalysis)
+          
         }
-        
         print("calculation of networks done")
-        v$AFMImageAnalyser@networksAnalysis<-networksAna
-        print("done v$AFMImageAnalyser@networksAnalysis<-networksAna")
+        v$AFMImageAnalyser@networksAnalysis<-AFMImageNetworksAnalysis
+        print("done v$AFMImageAnalyser@networksAnalysis<-AFMImageNetworksAnalysis")
       })
     }
     

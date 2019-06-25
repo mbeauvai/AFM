@@ -10,7 +10,9 @@
 #'   \item create your AFM image from a list of measured  heights (see example section of \code{\link{AFMImage}})
 #'   \item import your image from Nanoscope Analysis (TM) tool (\code{\link{importFromNanoscope}}) 
 #'   \item check if your sample is normally distributed and isotropic and get a pdf report (\code{\link{generateCheckReport}})
+#'   \item calculate the Gaussian mixes of the heights distribution (\code{\link{performGaussianMixCalculation}})
 #'   \item perform variance (variogram), roughness against lengthscale, fractal analysis and get a pdf report (\code{\link{generateReport}})
+#'   \item identify 2D networks (\code{\link{getNetworkParameters}})
 #' }
 #' 
 #' Other functions are :
@@ -57,26 +59,31 @@
 #' @docType package
 #' @name AFM
 #' @import data.table
-#' @import gstat
-#' @import rgl
 #' @import ggplot2
-#' @import png
-#' @import plyr
-#' @import methods
+#' @import gstat
 #' @import igraph
 #' @import methods
-#' @importFrom sp coordinates CRS is.projected proj4string spplot
-#' @importFrom fftwtools fftw2d
+#' @import png
+#' @import plyr
+#' @import scales
+#' @importFrom graphics lines
+#' @importFrom grDevices chull
+#' @importFrom dbscan dbscan
+#' @importFrom stats complete.cases ks.test pnorm
+#' @importFrom parallel clusterEvalQ clusterExport parLapply 
+#' @importFrom sp SpatialPoints SpatialPolygons Polygon Polygons SpatialPointsDataFrame spDistsN1 coordinates coordinates<- CRS is.projected proj4string proj4string<- spplot surfaceArea over
 #' @importFrom fractaldim fd.estim.filter1 fd.estim.isotropic fd.estim.squareincr fd.estim.transect.incr1 fd.estim.transect.var
+#' @importFrom graphics plot
 #' @importFrom grid grid.layout grid.newpage grid.text pushViewport viewport gpar grid.raster
 #' @importFrom gridExtra tableGrob ttheme_default
 #' @importFrom grDevices blues9 dev.off heat.colors pdf png
+#' @importFrom mixtools normalmixEM
 #' @importFrom moments skewness
 #' @importFrom pracma ceil meshgrid
-#' @importFrom rglwidget renderRglwidget rglwidget sceneChange registerSceneChange rglwidgetOutput
+#' @importFrom rgl clear3d renderRglwidget rglwidget sceneChange registerSceneChange rglwidgetOutput rgl.close rgl.cur rgl.set rgl.clear rgl.bg rgl.bbox rgl.light rgl.surface rgl.viewpoint rgl.snapshot rgl.open par3d polygon3d rotate3d translate3d shade3d terrain3d writeSTL
 #' @importFrom shiny actionButton downloadButton downloadHandler fileInput h3 hr htmlOutput HTML imageOutput isolate mainPanel navbarMenu navbarPage observeEvent plotOutput radioButtons reactive reactiveValues renderImage renderPlot renderTable renderUI shinyServer shinyUI sidebarLayout sidebarPanel sliderInput tableOutput tabPanel updateSliderInput uiOutput
 #' @importFrom shinyjs disable enable useShinyjs
 #' @importFrom stats coefficients cor dist dnorm lm na.omit sd var
 #' @importFrom stringr str_sub str_replace_all
-#' @importFrom utils head installed.packages read.table tail write.table
+#' @importFrom utils combn head installed.packages read.table tail write.table packageVersion
 NULL

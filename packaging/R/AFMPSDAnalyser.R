@@ -948,7 +948,7 @@ getAutoIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser, se
   
   #newMax_second_slope=ceiling(data[c(lengthData),]$r/10)
   #newMax_second_slope=ceiling(data[c(lengthData),]$r/10)
-  minW<-which.min(abs(data$r - data[c(lengthData),]$r/8)) 
+  minW<-which.min(abs(data$r - data[c(lengthData),]$r/10)) 
   minW
   data[minW]
   newMax_second_slope=minW
@@ -990,6 +990,8 @@ getAutoIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser, se
             b<-unname(res$coefficients[1])
             a<-unname(res$coefficients[2])
             inter <- (borigin-b)/a
+            slope <- a
+            yintersept <- b
             if ((!second_slope&(inter<finalres[1])&(inter>0))|
                 (second_slope&(inter<finalres[1])&(inter>0))){
               finalres=c(inter, x1, x2, borigin, slope, yintersept)
@@ -1027,9 +1029,10 @@ getAutoIntersectionForRoughnessAgainstLengthscale<-function(AFMImageAnalyser, se
     print(aby)
     space=ceiling(lengthData/4)
     space=ceiling(lengthData/8)
-    #space=2
+    space=ceiling(lengthData/10)
+    space=30
     print(paste("space= ",space))
-    x <- seq(newMax_second_slope,85, by=aby)
+    x <- seq(newMax_second_slope,lengthData, by=aby)
     z <- minimumR(data, space= space, x,x,second_slope)
   }
   return(z)
