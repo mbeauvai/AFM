@@ -322,7 +322,7 @@ sampleAFMImage<-function(AFMImage, percentage) {
 #' @param AFMImage an \code{\link{AFMImage}} from Atomic Force Microscopy
 #' @param cornerX horizontal coordinates of the extract
 #' @param cornerY vertical coordinates of the extract
-#' @param size square size of the extract
+#' @param size square size of the extract in number of pixels
 #' @return a new  \code{\link{AFMImage}} sample
 #' @author M.Beauvais
 #' @export
@@ -332,6 +332,7 @@ sampleAFMImage<-function(AFMImage, percentage) {
 #' anAFMImageExtract<-extractAFMImage(AFMImageOfAluminiumInterface,15,15,256)
 #' 
 extractAFMImage<-function(AFMImage, cornerX, cornerY, size) {
+  size2<-size
   size<-size-1
   
   cornerX<-cornerX*AFMImage@hscansize/AFMImage@samplesperline
@@ -354,9 +355,14 @@ extractAFMImage<-function(AFMImage, cornerX, cornerY, size) {
   alldata<-alldata[x>=minX & x<=maxX & y>=minY & y<=maxY]
   alldata$x<-alldata$x-min(alldata$x)
   alldata$y<-alldata$y-min(alldata$y)
-  vscansize<-max(alldata$x)-min(alldata$x)+1
-  hscansize<-max(alldata$y)-min(alldata$y)+1
+  
+  
+  hscansize<-AFMImage@hscansize/(AFMImage@samplesperline/size2)
+  vscansize<-AFMImage@vscansize/(AFMImage@lines/size2)
+  # vscansize<-max(alldata$x)-min(alldata$x)+1
+  # hscansize<-max(alldata$y)-min(alldata$y)+1
   scansize<-max(vscansize, hscansize)
+  
   samplesperline<-length(unique(alldata$y))
   lines<-length(unique(alldata$x))
   fullfilename<-paste(AFMImage@fullfilename, "extract.txt", sep="-")

@@ -155,13 +155,17 @@ analyse<-function(AFMImageAnalyser) {
   # PSD analysis
   psdAnalysis<-AFMImagePSDAnalysis()
   roughnessAgainstLengthscale(psdAnalysis)<-RoughnessByLengthScale(AFMImage, psdAnalysis)
+  AFMImageAnalyser@psdAnalysis<-psdAnalysis
   tryCatch({
-    intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(psdAnalysis, AFMImage, second_slope= FALSE)
+    intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(AFMImageAnalyser, second_slope= FALSE)
     intersections<-c(intersection)
-    intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(psdAnalysis, AFMImage, second_slope= TRUE)
+    intersection <- getAutoIntersectionForRoughnessAgainstLengthscale(AFMImageAnalyser, second_slope= TRUE)
+    AFMImagePSDSlopesAnalysis<-intersection
     intersections<-c(intersections,intersection)
     intersections(psdAnalysis)<-intersections
+    psdAnalysis@AFMImagePSDSlopesAnalysis<-AFMImagePSDSlopesAnalysis
   }, error = function(e) {print(paste("Impossible to find PSD intersections automaticaly",e))})
+  
   
   # fractal dimension analysis
   fdAnalysis<-AFMImageFractalDimensionsAnalysis()
@@ -284,6 +288,16 @@ setGeneric(name= "getRoughnessParameters",
 #' @aliases getRoughnessParameters,AFMImage-method
 setMethod(f="getRoughnessParameters", "AFMImage",
           definition= function(AFMImage) {
+            # surface parameters
+            surfaceArea<- surfaceArea(matrix(AFMImage@data$h,nrow = AFMImage@lines,ncol = AFMImage@samplesperline),
+                        cellx = AFMImage@hscansize/AFMImage@samplesperline, celly = AFMImage@vscansize/AFMImage@lines, 
+                        byCell = FALSE)
+            
+            # image(surfaceArea(matrix(AFMImage@data$h,nrow = AFMImage@lines,ncol = AFMImage@samplesperline),
+            #                   cellx = AFMImage@hscansize/AFMImage@samplesperline, celly = AFMImage@vscansize/AFMImage@lines, 
+            #                   byCell = TRUE))
+            
+            
             # amplitude parameters
             totalRMSRoughness_TotalRrms = sqrt(var(AFMImage@data$h))
             MeanRoughness_Ra = mean(abs(AFMImage@data$h))
@@ -294,7 +308,7 @@ setMethod(f="getRoughnessParameters", "AFMImage",
             
             # hybrid parameters
             
-            return(data.table(totalRMSRoughness_TotalRrms, MeanRoughness_Ra))
+            return(data.table(totalRMSRoughness_TotalRrms, MeanRoughness_Ra, surfaceArea))
           })
 
 
