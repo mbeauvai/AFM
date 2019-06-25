@@ -10,7 +10,7 @@
 #'   \item create your AFM image from a list of measured  heights (see example section of \code{\link{AFMImage}})
 #'   \item import your image from Nanoscope Analysis (TM) tool (\code{\link{importFromNanoscope}}) 
 #'   \item check if your sample is normally distributed and isotropic and get a pdf report (\code{\link{generateCheckReport}})
-#'   \item calculate the Gaussian mixes of the heights distribution (\code{\link{performGaussianMixCalculation}})
+#'   \item calculate the Gaussian mixes of the heights (\code{\link{performGaussianMixCalculation}})
 #'   \item perform variance (variogram), roughness against lengthscale, fractal analysis and get a pdf report (\code{\link{generateReport}})
 #'   \item identify 2D networks (\code{\link{getNetworkParameters}})
 #' }
@@ -50,6 +50,7 @@
 #' # If the sample is normaly distributed and isotropic, generate a full report
 #'   generateReport(AFMImage)
 #'   }
+#' @citation M.Beauvais sddsffdsdqsqs
 #' @references 
 #' Gneiting2012, Tilmann Gneiting, Hana Sevcikova and Donald B. Percival 'Estimators of Fractal Dimension: Assessing the Roughness of Time Series and Spatial Data - Statistics in statistical Science, 2012, Vol. 27, No. 2, 247-277' \cr\cr
 #' Olea2006, Ricardo A. Olea "A six-step practical approach to semivariogram modeling", 2006, "Stochastic Environmental Research and Risk Assessment, Volume 20, Issue 5 , pp 307-318" \cr\cr

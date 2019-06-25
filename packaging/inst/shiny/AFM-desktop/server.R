@@ -11,9 +11,10 @@ library(fractaldim)
 library(stringr)
 library(grid)
 library(gridExtra)
-#library(reshape2)
 library(gstat)
 library(parallel)
+options(java.parameters = "-Xmx2000m") 
+library(xlsx)
 
 data("AFMImageOfAluminiumInterface")
 data("AFMImageCollagenNetwork")
@@ -27,7 +28,7 @@ options(shiny.maxRequestSize = 900*1024^2)
 
 
 #HEADLESS<-TRUE
-HEADLESS<-FALSE
+HEADLESS<-TRUE
 AFMImageOfNormallyDistributedHeights@data$h<-AFMImageOfNormallyDistributedHeights@data$h-mean(AFMImageOfNormallyDistributedHeights@data$h)
 AFMImageOfOnePeak@data$h<-AFMImageOfOnePeak@data$h-mean(AFMImageOfOnePeak@data$h)
 AFMImageOfRegularPeaks@data$h<-AFMImageOfRegularPeaks@data$h-mean(AFMImageOfRegularPeaks@data$h)
@@ -118,8 +119,12 @@ shinyServer(function(input, output, session) {
   disableButtons<-function() {
     shinyjs::disable("saveRdataFileButton")
     shinyjs::disable("calculateGaussianMixButton")
+    shinyjs::disable("downloadGaussianMixSummaryButton")
+    shinyjs::disable("downloadGaussianMixCDFCheckButton")
+    shinyjs::disable("downloadGaussianMixDensityCheckButton")
+    shinyjs::disable("downloadGaussianMixHeightsButton")
+    shinyjs::disable("downloadGaussianMixCountsCheckButton")
     shinyjs::disable("RoughnessByLengthScaleButton")
-    shinyjs::disable("downloadGaussianMixButton")
     shinyjs::disable("downloadPSDPSDButton")
     shinyjs::disable("downloadRoughnessVsLengthscalePSDButton")
     shinyjs::disable("checkNormalityIsotropyCheckButton")
@@ -138,9 +143,12 @@ shinyServer(function(input, output, session) {
   enableButtons<-function() {
     shinyjs::enable("saveRdataFileButton")
     shinyjs::enable("calculateGaussianMixButton")
+    shinyjs::enable("downloadGaussianMixSummaryButton")
+    shinyjs::enable("downloadGaussianMixCDFCheckButton")
+    shinyjs::enable("downloadGaussianMixDensityCheckButton")
+    shinyjs::enable("downloadGaussianMixHeightsButton")
+    shinyjs::enable("downloadGaussianMixCountsCheckButton")
     shinyjs::enable("RoughnessByLengthScaleButton")
-    shinyjs::enable("downloadGaussianMixButton")
-    shinyjs::enable("downloadMixButton")
     shinyjs::enable("downloadPSDPSDButton")
     shinyjs::enable("downloadRoughnessVsLengthscalePSDButton")
     shinyjs::enable("checkNormalityIsotropyCheckButton")
@@ -320,6 +328,7 @@ shinyServer(function(input, output, session) {
             }
           }
         }
+        
         gaussianMixAnalysis<-performGaussianMixCalculation(AFMImageGaussianMixAnalysis= gaussianMixAnalysis, AFMImage= v$AFMImageAnalyser@AFMImage)
         print("done gaussianMixAnalysis")
         
@@ -331,19 +340,162 @@ shinyServer(function(input, output, session) {
     
   })
   
-  output$downloadGaussianMixButton <- renderUI({
+  output$downloadGaussianMixSummaryButton <- renderUI({
     # If missing input, return to avoid error later in function
     #if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@mixAnalysis))
     #  return(NULL)
-    downloadButton('exportGaussianMix',label='Export Gaussian Mix')
+    downloadButton('exportGaussianMixSummary',label='Export Summary')
   })
   
-  output$exportGaussianMix <- downloadHandler(
-    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '.csv', sep='') },
+  output$exportGaussianMixSummary <- downloadHandler(
+    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '-GaussianMixes-summary.xlsx', sep='') },
     content = function(file) {
-      write.csv(v$AFMImageAnalyser@gaussianMixAnalysis, file, row.names = FALSE)
+      
+      filenameExportGaussianMixes<-file
+      
+      res<-v$AFMImageAnalyser@gaussianMixAnalysis@summaryMixture
+      write.xlsx(data.frame(res), file=filenameExportGaussianMixes, row.names=FALSE)
+      
+      print("done exportGaussianMixSummary")
     }
   )   
+  
+  output$downloadGaussianMixHeightsButton <- renderUI({
+    # If missing input, return to avoid error later in function
+    #if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@mixAnalysis))
+    #  return(NULL)
+    downloadButton('exportGaussianMixHeights',label='Export Heights')
+  })
+  
+  output$exportGaussianMixHeights <- downloadHandler(
+    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '-GaussianMixes-heights.csv', sep='') },
+    content = function(file) {
+      
+      filenameExportGaussianMixes<-file
+      
+      heights<-v$AFMImageAnalyser@AFMImage@data$h
+      
+      oneSheetName<-paste0("heights-counts")
+      write.csv( data.frame(heights=heights),
+                 file=filenameExportGaussianMixes, 
+                 row.names=FALSE)  
+      
+      print("done exportGaussianMixCDF")
+    }
+  )  
+  
+  output$downloadGaussianMixCDFCheckButton <- renderUI({
+    # If missing input, return to avoid error later in function
+    #if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@mixAnalysis))
+    #  return(NULL)
+    downloadButton('exportGaussianMixCDF',label='Export CDF')
+  })
+  
+  output$exportGaussianMixCDF <- downloadHandler(
+    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '-GaussianMixes-CDF.xlsx', sep='') },
+    content = function(file) {
+      
+      filenameExportGaussianMixes<-file
+      
+      totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix) - length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[sapply(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix, is.null)])
+      print(totalNbOfMixtures)
+      for (mixtureNumberOfComponents in seq(v$AFMImageAnalyser@gaussianMixAnalysis@minGaussianMix,length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix))) {
+        baseSheetName<-paste0(mixtureNumberOfComponents,"-components-")
+        print(paste("mixtureNumberOfComponents= ",mixtureNumberOfComponents))
+        if (!is.null(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+          
+          TheExpDT<-v$AFMImageAnalyser@gaussianMixAnalysis@tcdfsEcdfsCheck[[mixtureNumberOfComponents]]
+          
+          oneSheetName<-paste0(baseSheetName,"tcdfs-ecdfs")
+          write.xlsx2(data.frame(tcdfs=TheExpDT$tcdfs, ecdfs= TheExpDT$ecdfs), 
+                      file=filenameExportGaussianMixes, 
+                      sheetName=oneSheetName,
+                      append=TRUE,
+                      row.names=FALSE)    
+        }
+      }
+      
+      
+      print("done exportGaussianMixCDF")
+    }
+  )   
+  
+  output$downloadGaussianMixDensityCheckButton <- renderUI({
+    # If missing input, return to avoid error later in function
+    #if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@mixAnalysis))
+    #  return(NULL)
+    downloadButton('exportGaussianMixDensity',label='Export Density')
+  })
+  
+  output$exportGaussianMixDensity <- downloadHandler(
+    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '-GaussianMixes-density.xlsx', sep='') },
+    content = function(file) {
+      
+      filenameExportGaussianMixes<-file
+      
+      totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix) - length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[sapply(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix, is.null)])
+      print(totalNbOfMixtures)
+      for (mixtureNumberOfComponents in seq(v$AFMImageAnalyser@gaussianMixAnalysis@minGaussianMix,length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix))) {
+        baseSheetName<-paste0(mixtureNumberOfComponents,"-components-")
+        print(paste("mixtureNumberOfComponents= ",mixtureNumberOfComponents))
+        if (!is.null(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+          
+
+          allHeights<-v$AFMImageAnalyser@gaussianMixAnalysis@densityCurvesAllHeights[[mixtureNumberOfComponents]]
+          
+          oneSheetName<-paste0(baseSheetName,"density-heights")
+          write.xlsx2(data.frame(density=allHeights$x, heights= allHeights$y,curve=allHeights$style),
+                      file=filenameExportGaussianMixes, 
+                      sheetName=oneSheetName,
+                      append=TRUE, row.names=FALSE)    
+          
+
+        }
+      }
+      print("done performGaussianMixCalculationExport")
+    }
+  )   
+  
+  output$downloadGaussianMixCountsCheckButton <- renderUI({
+    # If missing input, return to avoid error later in function
+    #if(is.null(v$AFMImageAnalyser)||is.null(v$AFMImageAnalyser@mixAnalysis))
+    #  return(NULL)
+    downloadButton('exportGaussianMixCounts',label='Export Counts')
+  })
+  
+  output$exportGaussianMixCounts <- downloadHandler(
+    filename = function() { paste(basename(v$AFMImageAnalyser@AFMImage@fullfilename), '-GaussianMixes-Counts.xlsx', sep='') },
+    content = function(file) {
+      
+      filenameExportGaussianMixes<-file
+      
+      res<-v$AFMImageAnalyser@gaussianMixAnalysis@summaryMixture
+      write.xlsx2(data.frame(res), file=filenameExportGaussianMixes, sheetName="Summary", row.names=FALSE)
+      
+      totalNbOfMixtures<-length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix) - length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[sapply(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix, is.null)])
+      print(totalNbOfMixtures)
+      for (mixtureNumberOfComponents in seq(v$AFMImageAnalyser@gaussianMixAnalysis@minGaussianMix,length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix))) {
+        baseSheetName<-paste0(mixtureNumberOfComponents,"-components-")
+        print(paste("mixtureNumberOfComponents= ",mixtureNumberOfComponents))
+        if (!is.null(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+
+          allComponents<-v$AFMImageAnalyser@gaussianMixAnalysis@eachComponentsCounts[[mixtureNumberOfComponents]]
+          
+          oneSheetName<-paste0(baseSheetName,"components-counts")
+          write.xlsx2(data.frame(allComponents),
+                      file=filenameExportGaussianMixes, 
+                      sheetName=oneSheetName,
+                      append=TRUE, row.names=FALSE)  
+          
+          
+        }
+      }
+      print("done exportGaussianMixCounts")
+    }
+  )   
+  
+  
+  
   #
   # PSD tab observer
   #
@@ -1088,17 +1240,13 @@ shinyServer(function(input, output, session) {
           print(totalNbOfMixtures)
           grobList <- vector("list", (totalNbOfMixtures)*3)
           listNb<-0          
-          for (mixtureNumberOfComponents in seq(2,length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix))) {
+          for (mixtureNumberOfComponents in seq(v$AFMImageAnalyser@gaussianMixAnalysis@minGaussianMix,length(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix))) {
             
             #mixtureNumberOfComponents<-2
             print(paste("mixtureNumberOfComponents= ",mixtureNumberOfComponents))
             if (!is.null(v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
-              heights.k<-v$AFMImageAnalyser@gaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]]
-              
-              tcdfs <- pnormmix(distinct.heights,mixture=heights.k)
-              ecdfs <- ecdf(heights)(distinct.heights)
-              
-              TheExpDT<-data.table(tcdfs,ecdfs)
+
+              TheExpDT<-v$AFMImageAnalyser@gaussianMixAnalysis@tcdfsEcdfsCheck[[mixtureNumberOfComponents]]
               p1 <- ggplot(data=TheExpDT)
               p1 <- p1 + geom_point(aes(tcdfs, ecdfs, colour = "blue"),data=TheExpDT, show.legend = FALSE)
               p1 <- p1 + ylab("Empirical CDF")
@@ -1109,13 +1257,7 @@ shinyServer(function(input, output, session) {
               grobList[[listNb]] <- p1
               
               
-              densityCurves<-data.frame(x=density(heights)$x , y=density(heights)$y, style=rep("Kernel", length(density(heights)$y)))
-              
-              
-              x <- seq(min(density(heights)$x),max(density(heights)$x),length=1000)
-              
-              densityCurves2<-data.frame(x=x, y=dnormalmix(x,heights.k), style=rep("Mixture", length(dnormalmix(x,heights.k))))
-              allHeights<-rbind(densityCurves,densityCurves2)
+              allHeights<-v$AFMImageAnalyser@gaussianMixAnalysis@densityCurvesAllHeights[[mixtureNumberOfComponents]]
               
               p2<-ggplot(allHeights, aes(x=x, y=y)) +
                 geom_line(alpha=0.8,size=1.2, aes(color=style)) 
@@ -1128,16 +1270,7 @@ shinyServer(function(input, output, session) {
               grobList[[listNb]] <- p2
               
               
-              allComponents<-data.table(heights=c(0),counts=c(0), component.number=c(0))
-              
-              for(component.number in seq(1, mixtureNumberOfComponents)) {
-                tlength=1000
-                x <- seq(min(density(heights)$x),max(density(heights)$x),length=tlength)
-                y   <- dnorm(x,mean=(heights.k$mu[component.number]), sd=heights.k$sigma[component.number])*length(heights)*heights.k$lambda[component.number]
-                allComponents<-rbind(allComponents, data.table(heights=x,counts=y, component.number=rep(component.number,tlength)))
-              }
-              allComponents<-allComponents[-1,]
-              
+              allComponents<-v$AFMImageAnalyser@gaussianMixAnalysis@eachComponentsCounts[[mixtureNumberOfComponents]]
               
               p3 <- ggplot(data=allComponents)
               p3 <- p3 + geom_point(data=allComponents, aes(heights, counts), size=1.05, color="#FF0000")
@@ -1161,12 +1294,12 @@ shinyServer(function(input, output, session) {
       return(NULL)
     }
     #print("gaussianMixSummary input$calculateGaussianMixButton!=NULL")
-
+    
     if (is.null(v$AFMImageAnalyser)) {
       #print("gaussianMixSummary is.null(v$AFMImageAnalyser")
       return(NULL)
     }
-
+    
     if (is.null(v$AFMImageAnalyser@gaussianMixAnalysis)) {
       #print("gaussianMixSummary is.null(v$AFMImageAnalyser@gaussianMixAnalysis")
       return(NULL)
@@ -2226,7 +2359,7 @@ shinyServer(function(input, output, session) {
           AFMImageNetworksAnalysis@shortestPaths
           AFMImageNetworksAnalysis@updateProgress(message="Calculate network parameters and holes characteristics", detail = "7/8")
           AFMImageNetworksAnalysis@updateProgress(value= 7)
-
+          
           AFMImageNetworksAnalysis<-calculateNetworkParameters(AFMImageNetworksAnalysis=AFMImageNetworksAnalysis, AFMImage=v$AFMImageAnalyser@AFMImage)
           AFMImageNetworksAnalysis@updateProgress<- updateProgressNetworkAnalysis
           AFMImageNetworksAnalysis@networksCharacteristics

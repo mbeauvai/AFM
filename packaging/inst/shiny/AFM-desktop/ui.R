@@ -32,7 +32,13 @@ shinyUI(
                           sliderInput("minmaxGaussianMix", label = h5("Number of components"), min = 2, max = 8, step = 1,
                                       value = c(2, 3)),
                           tags$hr(),
-                          actionButton('calculateGaussianMixButton',label='Calculate')
+                          actionButton('calculateGaussianMixButton',label='Calculate'),
+                          tags$hr(),
+                          uiOutput('downloadGaussianMixSummaryButton'),
+                          uiOutput('downloadGaussianMixCDFCheckButton'),
+                          uiOutput('downloadGaussianMixDensityCheckButton'),
+                          uiOutput('downloadGaussianMixHeightsButton'),
+                          uiOutput('downloadGaussianMixCountsCheckButton')
                         )
                         ,
                         mainPanel(

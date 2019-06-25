@@ -17,6 +17,10 @@ require(ggplot2)
 #' @slot maxGaussianMix the maximum number of components to calculate
 #' @slot epsilonGaussianMix the convergence criterion
 #' @slot gaussianMix a data.table to store the calculated Gaussian mixes
+#' @slot summaryMixture a data.table to summaryse the mixtures
+#' @slot tcdfsEcdfsCheck an array to store the points to draw tcdfs ecdfs check
+#' @slot densityCurvesAllHeights an array to store the points to draw the density curves
+#' @slot eachComponentsCounts an array to store the points to draw counts of each components
 #' @slot updateProgress a function to update a graphical user interface
 #' @name AFMImageGaussianMixAnalysis-class
 #' @rdname AFMImageGaussianMixAnalysis-class
@@ -27,6 +31,10 @@ AFMImageGaussianMixAnalysis<-setClass("AFMImageGaussianMixAnalysis",
                                 maxGaussianMix="numeric",
                                 epsilonGaussianMix="numeric",
                                 gaussianMix="array",
+                                summaryMixture="data.table",
+                                tcdfsEcdfsCheck="array",
+                                densityCurvesAllHeights="array",
+                                eachComponentsCounts="array",
                                 updateProgress="function"),
                               validity = function(object) { 
                                 return(TRUE)
@@ -45,6 +53,10 @@ setMethod("initialize",
             .Object@maxGaussianMix<-2
             .Object@epsilonGaussianMix<-1e-4
             .Object@gaussianMix<-array()
+            .Object@summaryMixture<-data.table()
+            .Object@tcdfsEcdfsCheck<-array()
+            .Object@densityCurvesAllHeights<-array()
+            .Object@eachComponentsCounts<-array()
             validObject(.Object) ## valide l'objet
             return(.Object)
           })
@@ -56,6 +68,120 @@ setMethod("initialize",
 AFMImageGaussianMixAnalysis <- function() {
   return(new("AFMImageGaussianMixAnalysis"))
 }
+
+#' Method \code{eachComponentsCounts} returns a data.table of Gaussian mixes
+#' @name AFMImageGaussianMixAnalysis-class
+#' @rdname AFMImageGaussianMixAnalysis-class
+setGeneric("summaryMixture",function(object){standardGeneric("summaryMixture")})
+setGeneric(name= "summaryMixture<-", 
+           def= function(AFMImageGaussianMixAnalysis, value) {
+             return(standardGeneric("summaryMixture<-"))
+           })
+
+
+#' @rdname AFMImageGaussianMixAnalysis-class
+#' @aliases summaryMixture
+#' @param object a \code{\link{AFMImageGaussianMixAnalysis}}
+setMethod("summaryMixture",signature=signature(object='AFMImageGaussianMixAnalysis'),
+          function(object) {
+            return(object@summaryMixture)
+          }
+)
+setReplaceMethod(f="summaryMixture",
+                 signature(AFMImageGaussianMixAnalysis = "AFMImageGaussianMixAnalysis", value = "data.table"),
+                 definition= function(AFMImageGaussianMixAnalysis, value) {
+                   AFMImageGaussianMixAnalysis@summaryMixture <- value
+                   return(AFMImageGaussianMixAnalysis)
+                 })
+
+#' Method \code{eachComponentsCounts} returns a data.table of Gaussian mixes
+#' @name AFMImageGaussianMixAnalysis-class
+#' @rdname AFMImageGaussianMixAnalysis-class
+setGeneric("eachComponentsCounts",function(object){standardGeneric("eachComponentsCounts")})
+setGeneric(name= "eachComponentsCounts<-", 
+           def= function(AFMImageGaussianMixAnalysis, value) {
+             return(standardGeneric("eachComponentsCounts<-"))
+           })
+
+
+#' @rdname AFMImageGaussianMixAnalysis-class
+#' @aliases eachComponentsCounts
+setMethod("eachComponentsCounts",signature=signature(object='AFMImageGaussianMixAnalysis'),
+          function(object) {
+            return(object@eachComponentsCounts)
+          }
+)
+setReplaceMethod(f="eachComponentsCounts",
+                 signature(AFMImageGaussianMixAnalysis = "AFMImageGaussianMixAnalysis", value = "array"),
+                 definition= function(AFMImageGaussianMixAnalysis, value) {
+                   AFMImageGaussianMixAnalysis@eachComponentsCounts <- value
+                   return(AFMImageGaussianMixAnalysis)
+                 })
+
+
+#' Method \code{tcdfsEcdfsCheck} returns a data.table of Gaussian mixes
+#' @name AFMImageGaussianMixAnalysis-class
+#' @rdname AFMImageGaussianMixAnalysis-class
+setGeneric("tcdfsEcdfsCheck",function(object){standardGeneric("tcdfsEcdfsCheck")})
+setGeneric(name= "tcdfsEcdfsCheck<-", 
+           def= function(AFMImageGaussianMixAnalysis, value) {
+             return(standardGeneric("tcdfsEcdfsCheck<-"))
+           })
+
+
+
+#' Method \code{densityCurvesAllHeights} returns a data.table of Gaussian mixes
+#' @name AFMImageGaussianMixAnalysis-class
+#' @rdname AFMImageGaussianMixAnalysis-class
+setGeneric("densityCurvesAllHeights",function(object){standardGeneric("densityCurvesAllHeights")})
+setGeneric(name= "densityCurvesAllHeights<-", 
+           def= function(AFMImageGaussianMixAnalysis, value) {
+             return(standardGeneric("densityCurvesAllHeights<-"))
+           })
+
+
+#' @rdname AFMImageGaussianMixAnalysis-class
+#' @aliases densityCurvesAllHeights
+setMethod("densityCurvesAllHeights",signature=signature(object='AFMImageGaussianMixAnalysis'),
+          function(object) {
+            return(object@densityCurvesAllHeights)
+          }
+)
+setReplaceMethod(f="densityCurvesAllHeights",
+                 signature(AFMImageGaussianMixAnalysis = "AFMImageGaussianMixAnalysis", value = "array"),
+                 definition= function(AFMImageGaussianMixAnalysis, value) {
+                   AFMImageGaussianMixAnalysis@densityCurvesAllHeights <- value
+                   return(AFMImageGaussianMixAnalysis)
+                 })
+
+
+#' Method \code{tcdfsEcdfsCheck} returns a data.table of Gaussian mixes
+#' @name AFMImageGaussianMixAnalysis-class
+#' @rdname AFMImageGaussianMixAnalysis-class
+setGeneric("tcdfsEcdfsCheck",function(object){standardGeneric("tcdfsEcdfsCheck")})
+setGeneric(name= "tcdfsEcdfsCheck<-", 
+           def= function(AFMImageGaussianMixAnalysis, value) {
+             return(standardGeneric("tcdfsEcdfsCheck<-"))
+           })
+
+
+#' @rdname AFMImageGaussianMixAnalysis-class
+#' @aliases tcdfsEcdfsCheck
+setMethod("tcdfsEcdfsCheck",signature=signature(object='AFMImageGaussianMixAnalysis'),
+          function(object) {
+            return(object@tcdfsEcdfsCheck)
+          }
+)
+setReplaceMethod(f="tcdfsEcdfsCheck",
+                 signature(AFMImageGaussianMixAnalysis = "AFMImageGaussianMixAnalysis", value = "array"),
+                 definition= function(AFMImageGaussianMixAnalysis, value) {
+                   AFMImageGaussianMixAnalysis@tcdfsEcdfsCheck <- value
+                   return(AFMImageGaussianMixAnalysis)
+                 })
+
+
+
+
 
 #' Method \code{GaussianMix} returns a data.table of Gaussian mixes
 #' @name AFMImageGaussianMixAnalysis-class
@@ -69,7 +195,6 @@ setGeneric(name= "gaussianMix<-",
 
 #' @rdname AFMImageGaussianMixAnalysis-class
 #' @aliases gaussianMix
-#' @param object a \code{\link{AFMImageGaussianMixAnalysis}}
 setMethod("gaussianMix",signature=signature(object='AFMImageGaussianMixAnalysis'),
           function(object) {
             return(object@gaussianMix)
@@ -170,6 +295,7 @@ setReplaceMethod(f="epsilonGaussianMix",
 #' @author M.Beauvais
 #' @export
 #' @examples
+#' \dontrun{
 #' library(AFM)
 #' 
 #' data(AFMImageCollagenNetwork)
@@ -177,6 +303,12 @@ setReplaceMethod(f="epsilonGaussianMix",
 #' AFMImage<-AFMImageCollagenNetwork
 #' AFMImage@fullfilename<-"/Users/one/AFMImageCollagenNetwork.txt"
 #' gMixAnalysis<-AFMImageGaussianMixAnalysis()
+#' # from two components
+#' gMixAnalysis@minGaussianMix<-2
+#' # to four components
+#' gMixAnalysis@maxGaussianMix<-4
+#' # convergence criteria
+#' gMixAnalysis@epsilonGaussianMix<-1e-4
 #' # Create a closure to update progress
 #' gMixAnalysis@updateProgress<- function(value = NULL, detail = NULL, message = NULL) {
 #'   if (exists("progressGaussianMix")){
@@ -189,11 +321,24 @@ setReplaceMethod(f="epsilonGaussianMix",
 #' }
 #' gMixAnalysis<-performGaussianMixCalculation(AFMImageGaussianMixAnalysis= gMixAnalysis, AFMImage)
 #' print("done performGaussianMixCalculation")
+#' }
 performGaussianMixCalculation<-function(AFMImageGaussianMixAnalysis, AFMImage) {
-  if (is.function(AFMImageGaussianMixAnalysis@updateProgress)&&
-      !is.null(AFMImageGaussianMixAnalysis@updateProgress())) {
-    AFMImageGaussianMixAnalysis@updateProgress(message="Calculating Gaussian Mixes")
+  number_of_components<-ecdf<-density<-NULL
+  
+  
+  # if (is.function(AFMImagePSDAnalysis@updateProgress)) {
+  #   AFMImagePSDAnalysis@updateProgress(message="1/3 - Calculating PSD2D", value=0)
+  # }
+  
+  # if (is.function(AFMImageGaussianMixAnalysis@updateProgress)&&
+  #     !is.null(AFMImageGaussianMixAnalysis@updateProgress())) {
+  #   AFMImageGaussianMixAnalysis@updateProgress(message="Calculating Gaussian Mixes", value=0)
+  # }  
+  
+  if (is.function(AFMImageGaussianMixAnalysis@updateProgress)) {
+    AFMImageGaussianMixAnalysis@updateProgress(message="Calculating Gaussian Mixes", value=0)
   }
+
   
   #data(AFMImageCollagenNetwork)
   #AFMImage<-AFMImageCollagenNetwork
@@ -217,12 +362,9 @@ performGaussianMixCalculation<-function(AFMImageGaussianMixAnalysis, AFMImage) {
   mixtureCounter<-0
   mixtureNumberOfComponents<-min
   for(mixtureNumberOfComponents in seq(min,max)){
-    if (is.function(AFMImageGaussianMixAnalysis@updateProgress)&&
-        !is.null(AFMImageGaussianMixAnalysis@updateProgress())) {
+    if (is.function(AFMImageGaussianMixAnalysis@updateProgress)) {
       mixtureCounter<-mixtureCounter+1
-      AFMImageGaussianMixAnalysis@updateProgress(message=paste("Calculating Gaussian Mixes", mixtureCounter ,"/",(as.numeric(max)-as.numeric(min)+1)) , detail = paste0((as.numeric(max)-as.numeric(min)+1),"/",(as.numeric(max))))
-      AFMImageGaussianMixAnalysis@updateProgress(value= 6)
-      
+      AFMImageGaussianMixAnalysis@updateProgress(message=paste("Calculating Gaussian Mixes", mixtureCounter ,"/",(as.numeric(max)-as.numeric(min)+1)) ,  value=0) #detail = paste0((as.numeric(max)-as.numeric(min)+1),"/",(as.numeric(max))),
     }
     
 
@@ -238,6 +380,95 @@ performGaussianMixCalculation<-function(AFMImageGaussianMixAnalysis, AFMImage) {
   }
   
   AFMImageGaussianMixAnalysis@gaussianMix<-gaussianMixList
+  
+  # creating the summary
+  res=data.table(number_of_components=c(0),
+                 #component=c(0),
+                 mean=c(0),
+                 sd=c(0),
+                 lambda=c(0))
+  
+  
+  totalNbOfMixtures<-length(AFMImageGaussianMixAnalysis@gaussianMix)
+  #totalNbOfMixtures<-length(gMixAnalysis@gaussianMix)
+  
+  for (mixtureNumberOfComponents in seq(AFMImageGaussianMixAnalysis@minGaussianMix,totalNbOfMixtures)) {
+    #for (mixtureNumberOfComponents in seq(gMixAnalysis@minGaussianMix,totalNbOfMixtures)) {
+    
+    if (!is.null(AFMImageGaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+      mixture<-AFMImageGaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]]
+      #mixture<-gMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]]
+      for(component.number in seq(1, mixtureNumberOfComponents)) {
+        if (length(mixture)>0) {
+          mean=mixture$mu[component.number]
+          sd=mixture$sigma[component.number]
+          lambda=mixture$lambda[component.number]
+          
+          res=rbind(res, data.table(number_of_components=mixtureNumberOfComponents,
+                                    #component=component.number,
+                                    mean=mean,
+                                    sd=sd,
+                                    lambda=lambda))
+        }
+      }
+    }
+  }
+  res<-res[-1,]
+  res<-res[order(number_of_components, mean)]
+  res
+  
+  AFMImageGaussianMixAnalysis@summaryMixture<-res
+  
+  # creating points to draw curves
+  AFMImageGaussianMixAnalysis@tcdfsEcdfsCheck<-array(list(), max)
+  AFMImageGaussianMixAnalysis@densityCurvesAllHeights<-array(list(), max)
+  AFMImageGaussianMixAnalysis@eachComponentsCounts<-array(list(), max)
+  
+
+  heights<-AFMImage@data$h
+  distinct.heights <- sort(unique(heights))
+  
+  totalNbOfMixtures<-length(AFMImageGaussianMixAnalysis@gaussianMix) - length(AFMImageGaussianMixAnalysis@gaussianMix[sapply(AFMImageGaussianMixAnalysis@gaussianMix, is.null)])
+  print(totalNbOfMixtures)
+  
+  
+  for (mixtureNumberOfComponents in seq(AFMImageGaussianMixAnalysis@minGaussianMix,length(AFMImageGaussianMixAnalysis@gaussianMix))) {
+    baseSheetName<-paste0(mixtureNumberOfComponents,"-components-")
+    print(paste("mixtureNumberOfComponents= ",mixtureNumberOfComponents))
+    if (!is.null(AFMImageGaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+      #if (!is.null(gMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]])) {
+      heights.k<-AFMImageGaussianMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]]
+      #heights.k<-gMixAnalysis@gaussianMix[mixtureNumberOfComponents][[1]]
+      
+      tcdfs <- pnormmix(distinct.heights,mixture=heights.k)
+      ecdfs <- ecdf(heights)(distinct.heights)
+      TheExpDT<-data.table(tcdfs,ecdfs)
+      
+      AFMImageGaussianMixAnalysis@tcdfsEcdfsCheck[[mixtureNumberOfComponents]]<-TheExpDT
+
+      densityCurves<-data.frame(x=density(heights)$x , y=density(heights)$y, style=rep("Kernel", length(density(heights)$y)))
+      x <- seq(min(density(heights)$x),max(density(heights)$x),length=1000)
+      densityCurves2<-data.frame(x=x, y=dnormalmix(x,heights.k), style=rep("Mixture", length(dnormalmix(x,heights.k))))
+      allHeights<-rbind(densityCurves,densityCurves2)
+
+      AFMImageGaussianMixAnalysis@densityCurvesAllHeights[[mixtureNumberOfComponents]]<-allHeights
+            
+      allComponents<-data.table(heights=c(0),counts=c(0), component.number=c(0))
+
+      for(component.number in seq(1, mixtureNumberOfComponents)) {
+        tlength=1000
+        x <- seq(min(density(heights)$x),max(density(heights)$x),length=tlength)
+        y   <- dnorm(x,mean=(heights.k$mu[component.number]), sd=heights.k$sigma[component.number])*length(heights)*heights.k$lambda[component.number]
+        allComponents<-rbind(allComponents, data.table(heights=x,counts=y, component.number=rep(component.number,tlength)))
+      }
+      allComponents<-allComponents[-1,]
+
+      AFMImageGaussianMixAnalysis@eachComponentsCounts[[mixtureNumberOfComponents]]<-allComponents
+    }
+  }
+  
+
+  
   
   #print(gaussianMixList)
   return(AFMImageGaussianMixAnalysis)
