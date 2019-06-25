@@ -1,0 +1,19 @@
+1.2.6
+Gaussian mixture analysis
+Network and gaussian mixture article identified as citation of package
+
+1.2.5
+network identification and analysis
+
+1.2.4
+full support of 2d network analysis
+
+1.2.3
+Bug correction
+Modification of network creation
+
+1.2.2
+added NEWS file
+Bug correction
+Added slope analysis in Variograms and Power Spectral Density
+Added support of network analysis - draft version
