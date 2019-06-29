@@ -9,7 +9,10 @@ test_that("generateReport", {
 
   # exportDirectory=tempdir()
   # #exportDirectory="P:/MAT_DOCUMENTS/AccPlatform/person_display_R/"
+<<<<<<< HEAD
   # 
+=======
+>>>>>>> 20dadf6f59c168d54865c6b5b5e69cce916aa856
   # data("AFMImageOfRegularPeaks")
   # newAFMImage<-AFMImageOfRegularPeaks
   # newAFMImage@fullfilename<-paste(exportDirectory,"AFMImageOfRegularPeaks.txt",sep="/")
