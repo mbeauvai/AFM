@@ -86,6 +86,56 @@ AFMImageVariogramModel <- function() {
   return(new("AFMImageVariogramModel"))
 }
 
+#' @title AFM Image log-log experimental variogram slope analysis
+#' 
+#' @description \code{omniVariogramSlopeAnalysis} stores the analysis of the second slope in roughness against lenghtscale
+#' 
+#' @slot intersection_sill to be removed ?
+#' @slot sill to be removed ?
+#' @slot slope to be removed ?
+#' @slot yintersept to be removed ?
+#' @name omniVariogramSlopeAnalysis-class
+#' @rdname omniVariogramSlopeAnalysis-class
+#' @exportClass omniVariogramSlopeAnalysis
+#' @author M.Beauvais
+omniVariogramSlopeAnalysis<-setClass("omniVariogramSlopeAnalysis",
+                                     slots = c(intersection_sill="numeric", 
+                                               sill="numeric", 
+                                               slope="numeric",
+                                               yintersept="numeric",
+                                               tangente_point1="numeric",
+                                               tangente_point2="numeric"),
+                                     validity = function(object) { 
+                                       return(TRUE)
+                                     }
+)
+
+#' Constructor method of omniVariogramSlopeAnalysis Class.
+#' 
+#' @param .Object an omniVariogramSlopeAnalysis object
+#' @rdname omniVariogramSlopeAnalysis-class
+#' @export
+setMethod("initialize",
+          "omniVariogramSlopeAnalysis",
+          function(.Object) {
+            .Object@intersection_sill<-0
+            .Object@sill<-0
+            .Object@slope<-0
+            .Object@yintersept<-0
+            .Object@tangente_point1<-0
+            .Object@tangente_point2<-0
+            validObject(.Object) ## valide l'objet
+            return(.Object)
+          })
+
+#' Wrapper function omniVariogramSlopeAnalysis
+#'
+#' @rdname omniVariogramSlopeAnalysis-class
+#' @export
+omniVariogramSlopeAnalysis <- function() {
+  return(new("omniVariogramSlopeAnalysis"))
+}
+
 #' @title AFM image variogram analysis class
 #' 
 #' @description \code{AFMImageVariogramAnalysis} manages the variogram analysis of an \code{\link{AFMImage}}
@@ -93,6 +143,7 @@ AFMImageVariogramModel <- function() {
 #' @slot width (optional) a distance step for the calculation of the variograms
 #'   (e.g.: width=  integer of (scan Size divided by number of lines)= ceil(1000 / 512) for AFMImageOfAluminiumInterface
 #' @slot omnidirectionalVariogram a data.table to store the omnidirectional variogram
+#' @slot variogramSlopeAnalysis a AFMImageVariogramAnalysis to analyse slope in log log omnidirectional semivariogram
 #' @slot directionalVariograms a data.table to store the directional variograms
 #' @slot sampleFitPercentage a sample size as a percentage of random points in the \code{\link{AFMImage}}. These points will be used to fit the variogram models.
 #' @slot chosenFitSample the chosen random points  of the \code{\link{AFMImage}} to perform the fitting of the variogram models.
@@ -110,6 +161,7 @@ AFMImageVariogramAnalysis<-setClass("AFMImageVariogramAnalysis",
                                       width="numeric",
                                       sampleVariogramPercentage="numeric",
                                       omnidirectionalVariogram="data.table",
+                                      variogramSlopeAnalysis="omniVariogramSlopeAnalysis",
                                       expectedSill="numeric",
                                       expectedRange="numeric",
                                       directionalVariograms="data.table",
@@ -294,55 +346,30 @@ setMethod(f="getDTModelSillRange", "AFMImageVariogramAnalysis",
             return(res)
           })
 
-#' @title AFM Image psd slope analysis
-#' 
-#' @description \code{AFMImageVariogramSlopesAnalysis} stores the analysis of the second slope in roughness against lenghtscale
-#' 
-#' @slot intersection_sill to be removed ?
-#' @slot sill to be removed ?
-#' @slot slope to be removed ?
-#' @slot yintersept to be removed ?
-#' @name AFMImageVariogramSlopesAnalysis-class
-#' @rdname AFMImageVariogramSlopesAnalysis-class
-#' @exportClass AFMImageVariogramSlopesAnalysis
-#' @author M.Beauvais
-AFMImageVariogramSlopesAnalysis<-setClass("AFMImageVariogramSlopesAnalysis",
-                                    slots = c(intersection_sill="numeric", 
-                                              sill="numeric", 
-                                              slope="numeric",
-                                              yintersept="numeric",
-                                              tangente_point1="numeric",
-                                              tangente_point2="numeric"),
-                                    validity = function(object) { 
-                                      return(TRUE)
-                                    }
+
+
+#' Method \code{variogramSlopeAnalysis} returns the slope anaylis on the log-log omnidirectional experimental semi variogram
+#' @name AFMImageVariogramAnalysis-class
+#' @rdname AFMImageVariogramAnalysis-class
+setGeneric("variogramSlopeAnalysis",function(object){standardGeneric("variogramSlopeAnalysis")})
+setGeneric(name= "variogramSlopeAnalysis<-", 
+           def= function(AFMImageVariogramAnalysis, value) {
+             return(standardGeneric("variogramSlopeAnalysis<-"))
+           })
+
+#' @rdname AFMImageVariogramAnalysis-class
+#' @aliases variogramSlopeAnalysis
+setMethod("variogramSlopeAnalysis",signature=signature(object='AFMImageVariogramAnalysis'),
+          function(object) {
+            return(object@variogramSlopeAnalysis)
+          }
 )
-
-#' Constructor method of AFMImageVariogramSlopesAnalysis Class.
-#' 
-#' @param .Object an AFMImageVariogramSlopesAnalysis object
-#' @rdname AFMImageVariogramSlopesAnalysis-class
-#' @export
-setMethod("initialize",
-          "AFMImageVariogramSlopesAnalysis",
-          function(.Object) {
-            .Object@intersection_sill<-0
-            .Object@sill<-0
-            .Object@slope<-0
-            .Object@yintersept<-0
-            .Object@tangente_point1<-0
-            .Object@tangente_point2<-0
-            validObject(.Object) ## valide l'objet
-            return(.Object)
-          })
-
-#' Wrapper function AFMImageVariogramSlopesAnalysis
-#'
-#' @rdname AFMImageVariogramSlopesAnalysis-class
-#' @export
-AFMImageVariogramSlopesAnalysis <- function() {
-  return(new("AFMImageVariogramSlopesAnalysis"))
-}
+setReplaceMethod(f="variogramSlopeAnalysis",
+                 signature(AFMImageVariogramAnalysis = "AFMImageVariogramAnalysis", value = "omniVariogramSlopeAnalysis"),
+                 definition= function(AFMImageVariogramAnalysis, value) {
+                   AFMImageVariogramAnalysis@variogramSlopeAnalysis <- value
+                   return(AFMImageVariogramAnalysis)
+                 })
 
 
 #' evaluateVariogramModels method to evaluate the basic variogram models
@@ -801,7 +828,7 @@ statsFromKrige<-function(name, vgm, part_valid, part_valid_pr) {
 
 #' \code{getAutoIntersectionForOmnidirectionalVariogram} returns the slope in the omnidirectional variograms
 #' @param AFMImageAnalyser an \code{\link{AFMImageAnalyser}}
-#' @return an \code{\link{AFMImageVariogramSlopesAnalysis}}
+#' @return an \code{\link{omniVariogramSlopeAnalysis}}
 #' @author M.Beauvais
 #' @export
 getAutoIntersectionForOmnidirectionalVariogram<-function(AFMImageAnalyser){
@@ -858,15 +885,15 @@ getAutoIntersectionForOmnidirectionalVariogram<-function(AFMImageAnalyser){
       #finalres2=c(finalres2, inter)
     }
     
-    AFMImageVariogramSlopesAnalysis = new("AFMImageVariogramSlopesAnalysis")
-    AFMImageVariogramSlopesAnalysis@intersection_sill=finalres[1]
-    AFMImageVariogramSlopesAnalysis@tangente_point1=finalres[2]
-    AFMImageVariogramSlopesAnalysis@tangente_point2=finalres[3]
-    AFMImageVariogramSlopesAnalysis@sill=finalres[4]
-    AFMImageVariogramSlopesAnalysis@slope=finalres[5]
-    AFMImageVariogramSlopesAnalysis@yintersept=finalres[6]
-    #print(AFMImageVariogramSlopesAnalysis)
-    return(AFMImageVariogramSlopesAnalysis)
+    omniVariogramSlopeAnalysis = new("omniVariogramSlopeAnalysis")
+    omniVariogramSlopeAnalysis@intersection_sill=finalres[1]
+    omniVariogramSlopeAnalysis@tangente_point1=finalres[2]
+    omniVariogramSlopeAnalysis@tangente_point2=finalres[3]
+    omniVariogramSlopeAnalysis@sill=finalres[4]
+    omniVariogramSlopeAnalysis@slope=finalres[5]
+    omniVariogramSlopeAnalysis@yintersept=finalres[6]
+    #print(omniVariogramSlopeAnalysis)
+    return(omniVariogramSlopeAnalysis)
   }
   
   lengthData<-nrow(data)
@@ -916,12 +943,12 @@ getAutoIntersectionForOmnidirectionalVariogram<-function(AFMImageAnalyser){
 #' } 
 getLogLogOmnidirectionalSlopeGraph<-function(AFMImageAnalyser, withFratcalSlope=FALSE) {
   tryCatch({
-    AFMImageVariogramSlopesAnalysis=getAutoIntersectionForOmnidirectionalVariogram(AFMImageAnalyser)
+    omniVariogramSlopeAnalysis=getAutoIntersectionForOmnidirectionalVariogram(AFMImageAnalyser)
     
     
     # resVarioDT <- data.table(
     #   name=basename(AFMImage@fullfilename),
-    #   variogram_slope=AFMImageVariogramSlopesAnalysis@slope
+    #   variogram_slope=omniVariogramSlopeAnalysis@slope
     # )
     # 
     # if (!exists("resVario")) {
@@ -942,13 +969,13 @@ getLogLogOmnidirectionalSlopeGraph<-function(AFMImageAnalyser, withFratcalSlope=
     myvgm<-data.table(dist=log10(myvgm$dist), gamma=log10(myvgm$gamma))
     
     p1<-ggplot(myvgm, aes(x = dist, y = gamma)) + geom_point()   
-    p1 <- p1 + ylab("semivariance")
-    p1 <- p1 + xlab("distance (nm)")
+    p1 <- p1 + ylab("log semivariance")
+    p1 <- p1 + xlab("log lag distance (nm)")
     if (withFratcalSlope) {
-      AFMImageVariogramSlopesAnalysis=getAutoIntersectionForOmnidirectionalVariogram(AFMImageAnalyser)
-      p1 <- p1 + geom_abline(intercept = AFMImageVariogramSlopesAnalysis@yintersept, slope = AFMImageVariogramSlopesAnalysis@slope)
+      omniVariogramSlopeAnalysis=getAutoIntersectionForOmnidirectionalVariogram(AFMImageAnalyser)
+      p1 <- p1 + geom_abline(intercept = omniVariogramSlopeAnalysis@yintersept, slope = omniVariogramSlopeAnalysis@slope)
     }
-    p1 <- p1 + ggtitle(paste0(basename(AFMImage@fullfilename)," semivariance - slope=", AFMImageVariogramSlopesAnalysis@slope ))
+    p1 <- p1 + ggtitle(paste0(basename(AFMImage@fullfilename)," semivariance - slope=", omniVariogramSlopeAnalysis@slope ))
     p1 <- p1 + expand_limits(y = 0)
     p1 <- p1 + guides(colour=FALSE)
     return(p1)
