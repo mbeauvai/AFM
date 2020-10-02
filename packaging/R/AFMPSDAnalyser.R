@@ -432,7 +432,7 @@ setGeneric(name= "PSD2DAgainstFrequency",
 
 #' @rdname PSD2DAgainstFrequency-methods
 #' @aliases PSD2DAgainstFrequency,AFMImage-method
-setMethod(f="PSD2DAgainstFrequency", "AFMImage",
+setMethod(f="PSD2DAgainstFrequency", signature(AFMImage="AFMImage",AFMImagePSDAnalysis="AFMImagePSDAnalysis"),
           definition= function(AFMImage, AFMImagePSDAnalysis) {
             NyquistFq<-getNyquistSpatialFrequency(AFMImage)
             
