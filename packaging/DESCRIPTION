@@ -1,7 +1,7 @@
 Package: AFM
 Type: Package
-Version: 1.3
-Date: 2019-06-15
+Version: 2.0
+Date: 2020-10-02
 Title: Atomic Force Microscope Image Analysis
 Authors@R: c(person("Mathieu", "Beauvais", role = c("aut", "cre"), email = "beauvais.escp@gmail.com"),person("Irma", "Liascukiene", role = "aut"),person("Jessem", "Landoulsi", role = "aut"))
 Author: Mathieu Beauvais [aut, cre],
